@@ -1,0 +1,14 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "condomio-rvi-mvp",
+  "main": "vinext/server/fetch-handler",
+  "compatibility_date": "2026-09-18",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "vars": {
+    "SUPABASE_URL": "https://yttwbvrmdldtabmerlmd.supabase.co",
+    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_PXHsXiUAluySbTu5MAVy6g_7bNrQaed",
+    "ADMIN_EMAIL": "pdongoi@data-prix.com",
+    "APPLICATIONS_ENABLED": "false"
+  }
+}
