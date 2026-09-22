@@ -47,6 +47,8 @@ export default function SellerPortal() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const requested = params.get("seccion") as Tab | null;
+    // Query parameters seed deterministic demo views after hydration.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (requested && ["edificios", "oportunidades", "comisiones", "perfil"].includes(requested)) setTab(requested);
     if (params.get("vista") === "nuevo-edificio") { setTab("edificios"); setShowBuildingForm(true); }
     if (params.get("vista") === "nueva-oportunidad") { setTab("edificios"); setOpportunityBuilding(sampleBuildings[0].id); }

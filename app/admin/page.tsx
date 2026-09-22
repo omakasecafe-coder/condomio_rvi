@@ -35,7 +35,11 @@ export default function AdminPage() {
     } catch (cause) { setError(cause instanceof Error ? cause.message : "No se pudieron cargar los datos."); }
     finally { setLoading(false); }
   }, []);
-  useEffect(() => { void reload(); }, [reload]);
+  useEffect(() => {
+    // Initial data loading intentionally synchronizes API state into the view.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void reload();
+  }, [reload]);
 
   async function act(item: Item, action: "markWon" | "markPaid") {
     if (demo) { setError("Esta es una muestra visual. Los cambios no se guardan."); return; }

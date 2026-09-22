@@ -50,7 +50,7 @@ En Cloudflare Workers & Pages, importa ese repositorio mediante **Create applica
 - Comando de compilación: `npm run build`.
 - Comando de despliegue: `npx wrangler deploy`.
 
-Cloudflare compilará y desplegará cada cambio de la rama principal. Agrega los secretos del Worker en **Settings → Variables and Secrets** antes de habilitar las funciones con datos reales. La URL esperada será `https://condomio-rvi-mvp.omakase-cafe.workers.dev` después del primer despliegue exitoso.
+Cloudflare compilará y desplegará cada cambio de la rama principal. Agrega los secretos del Worker en **Settings → Variables and Secrets** antes de habilitar las funciones con datos reales. La URL esperada será `https://condomio-rvi-mvp.condomio.workers.dev` después del primer despliegue exitoso.
 
 Referencia: [Cloudflare Workers Builds](https://developers.cloudflare.com/workers/ci-cd/builds/).
 

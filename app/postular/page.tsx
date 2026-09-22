@@ -33,6 +33,8 @@ export default function ApplyPage() {
     const params = new URLSearchParams(window.location.search);
     const requested = params.get("paso") as Step | null;
     if (requested && labels[requested]) {
+      // Query parameters seed deterministic demo views after hydration.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStep(requested); setDemo(true);
       if (requested === "resultado" && params.get("aprobado") === "1") setPassedAttitude(true);
       if (requested === "validacion" || requested === "bienvenida") setPassedCommercial(true);

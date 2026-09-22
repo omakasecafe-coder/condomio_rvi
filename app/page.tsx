@@ -20,7 +20,11 @@ export default function Home() {
   const [error, setError] = useState("");
   useEffect(() => { document.title = `${stage === "code" ? "Verificación" : "Acceso vendedor"} · Condomio MVP`; }, [stage]);
 
-  useEffect(() => { if (new URLSearchParams(window.location.search).get("vista") === "otp") setStage("code"); }, []);
+  useEffect(() => {
+    // This query parameter exists only for deterministic demo screenshots.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (new URLSearchParams(window.location.search).get("vista") === "otp") setStage("code");
+  }, []);
 
   async function requestCode(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

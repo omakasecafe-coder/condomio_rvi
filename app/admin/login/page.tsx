@@ -15,7 +15,11 @@ export default function AdminLogin() {
   const [error, setError] = useState("");
   useEffect(() => { document.title = `${sent ? "Verificación admin" : "Acceso admin"} · Condomio MVP`; }, [sent]);
 
-  useEffect(() => { if (new URLSearchParams(window.location.search).get("vista") === "otp") setSent(true); }, []);
+  useEffect(() => {
+    // This query parameter exists only for deterministic demo screenshots.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (new URLSearchParams(window.location.search).get("vista") === "otp") setSent(true);
+  }, []);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
