@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { attitudeQuestions, commercialQuestions, type AssessmentQuestion } from "@/lib/questions";
+import { useResendCountdown } from "@/lib/use-resend-countdown";
 
 type Step = "datos" | "correo" | "actitud" | "resultado" | "conoce" | "examen" | "resultado-comercial" | "validacion" | "bienvenida";
 type Applicant = { firstName: string; paternalSurname: string; maternalSurname: string; documentType: string; documentNumber: string; birthDate: string; phone: string; email: string };
@@ -27,6 +28,8 @@ export default function ApplyPage() {
   const [demo, setDemo] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const { seconds: resendSeconds, restart: restartResend, canResend } = useResendCountdown();
   const [config, setConfig] = useState<Config>({ termsUrl: null, termsVersion: null, materialsUrl: null, acceptingApplications: false });
 
   useEffect(() => {
@@ -63,8 +66,19 @@ export default function ApplyPage() {
     if (demo) { forward("actitud"); return; }
     if (!config.acceptingApplications) { setError("Las postulaciones aún no están habilitadas. No se han enviado tus datos."); return; }
     setBusy(true); setError("");
-    try { await postJson("/api/auth/start", { role: "applicant", email: data.email }); forward("correo"); }
+    try { await postJson("/api/auth/start", { role: "applicant", email: data.email }); restartResend(); forward("correo"); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "No se pudo enviar el código."); }
+    finally { setBusy(false); }
+  }
+
+  async function resendEmailCode() {
+    if (!applicant || !canResend || busy) return;
+    setBusy(true); setError(""); setNotice("");
+    try {
+      await postJson("/api/auth/start", { role: "applicant", email: applicant.email });
+      restartResend();
+      setNotice("Enviamos un código nuevo. Revisa también la carpeta de spam.");
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "No se pudo reenviar el código."); }
     finally { setBusy(false); }
   }
 
@@ -116,7 +130,7 @@ export default function ApplyPage() {
       <section className="apply-main"><div className="apply-topline"><span>ETAPA {stepIndex + 1} DE {steps.length}</span><span>{demo ? "VISTA PREVIA DEL MVP" : "POSTULACIÓN"}</span></div>
         {error && <p role="alert" className="workspace-error">{error}</p>}
         {step === "datos" && <div className="apply-panel"><span className="card-kicker">01 / POSTULACIÓN</span><h2>Cuéntanos sobre ti</h2><p>Verificaremos tu correo antes de guardar tus datos.</p><form onSubmit={submitProfile}><div className="form-grid"><Field name="firstName" label="Nombre" required /><Field name="paternalSurname" label="Apellido paterno" required /><Field name="maternalSurname" label="Apellido materno" required /><SelectField name="documentType" label="Tipo de documento" values={["DNI", "CE", "PASAPORTE"]} /><Field name="documentNumber" label="Número de documento" required /><Field name="birthDate" label="Fecha de nacimiento" type="date" required /><Field name="phone" label="Teléfono" type="tel" required /><Field name="email" label="Correo electrónico" type="email" required /></div><Button type="submit" className="apply-primary" disabled={busy}>{busy ? "Enviando código…" : "Continuar a evaluación"}</Button></form></div>}
-        {step === "correo" && <div className="apply-panel"><span className="card-kicker">02 / VERIFICACIÓN</span><h2>Revisa tu correo</h2><p>Enviamos un código de seis dígitos a {applicant?.email}. No compartas el código.</p><form onSubmit={verifyEmail}><Field name="code" label="Código de acceso" inputMode="numeric" autoComplete="one-time-code" maxLength={6} pattern="[0-9]{6}" value={code} onChange={event => setCode(event.target.value.replace(/\D/g, ""))} required /><Button type="submit" className="apply-primary" disabled={busy || code.length !== 6}>{busy ? "Verificando…" : "Verificar correo"}</Button></form></div>}
+        {step === "correo" && <div className="apply-panel"><span className="card-kicker">02 / VERIFICACIÓN</span><h2>Revisa tu correo</h2><p>Enviamos un código de seis dígitos a {applicant?.email}. No compartas el código.</p><form onSubmit={verifyEmail}><Field name="code" label="Código de acceso" inputMode="numeric" autoComplete="one-time-code" maxLength={6} pattern="[0-9]{6}" value={code} onChange={event => setCode(event.target.value.replace(/\D/g, ""))} required /><Button type="submit" className="apply-primary" disabled={busy || code.length !== 6}>{busy ? "Verificando…" : "Verificar correo"}</Button>{notice && <p role="status" className="form-notice">{notice}</p>}<div className="resend-row" aria-live="polite">{canResend ? <button type="button" className="resend-button" onClick={() => void resendEmailCode()} disabled={busy || !applicant}>Reenviar código</button> : <span>Podrás reenviar en {resendSeconds} s</span>}</div></form></div>}
         {step === "actitud" && <div className="apply-panel"><span className="card-kicker">03 / EVALUACIÓN ACTITUDINAL</span><h2>¿Cómo actuarías?</h2><p>Selecciona la respuesta que mejor refleja tu forma de trabajar. Para avanzar necesitas al menos 3 de 4 respuestas correctas.</p><QuestionSet questions={attitudeQuestions} answers={attitudeAnswers} onAnswer={(index, value) => setAttitudeAnswers(current => ({ ...current, [index]: value }))} /><Button className="apply-primary" disabled={busy || Object.keys(attitudeAnswers).length < 4} onClick={() => void submitAnswers("attitude")}>Ver resultado</Button></div>}
         {step === "resultado" && <div className="apply-panel result-panel"><span className="result-icon">{passedAttitude ? "✓" : "—"}</span><span className="card-kicker">04 / RESULTADO</span><h2>{passedAttitude ? "¡Felicitaciones, has superado la prueba!" : "Gracias por tu interés"}</h2><p>{passedAttitude ? "Ya puedes conocer Condomio y continuar con la siguiente evaluación." : "Conservaremos tu postulación y nos pondremos en contacto contigo más adelante."}</p>{passedAttitude && <Button className="apply-primary" onClick={() => forward("conoce")}>Conocer Condomio</Button>}</div>}
         {step === "conoce" && <div className="apply-panel learn-panel"><span className="card-kicker">05 / CONOCE CONDOMIO</span><h2>Una mejor experiencia para la vida en edificios.</h2><p>Condomio es una solución para la gestión de edificios y condominios. La red comercial independiente identifica oportunidades y acompaña a los potenciales clientes durante el proceso de evaluación.</p><div className="learn-grid"><article><span>01</span><h3>Qué hacemos</h3><p>Ayudamos a organizar la información y la operación de comunidades residenciales.</p></article><article><span>02</span><h3>Cómo funciona</h3><p>El vendedor registra un edificio, crea una oportunidad y da seguimiento desde Contacto hasta Negociación.</p></article><article><span>03</span><h3>Modelo comercial</h3><p>Administración valida los contratos firmados. La comisión se muestra como precio unitario por número de departamentos.</p></article></div><div className="resource-note"><strong>Material comercial</strong>{config.materialsUrl ? <p><a href={config.materialsUrl} target="_blank" rel="noopener noreferrer">Descargar presentación o PDF oficial</a></p> : <p>Las presentaciones y PDF oficiales están pendientes de publicación.</p>}</div><Button className="apply-primary" onClick={() => forward("examen")}>Tomar evaluación comercial</Button></div>}

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Label } from "@/components/ui/label";
+import { useResendCountdown } from "@/lib/use-resend-countdown";
 
 export default function AdminLogin() {
   const [email, setEmail] = useState("");
@@ -13,6 +14,8 @@ export default function AdminLogin() {
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const { seconds: resendSeconds, restart: restartResend, canResend } = useResendCountdown();
   useEffect(() => { document.title = `${sent ? "Verificación admin" : "Acceso admin"} · Condomio MVP`; }, [sent]);
 
   useEffect(() => {
@@ -25,6 +28,7 @@ export default function AdminLogin() {
     event.preventDefault();
     setBusy(true);
     setError("");
+    setNotice("");
     try {
       const response = await fetch(sent ? "/api/auth/verify" : "/api/auth/start", {
         method: "POST",
@@ -34,9 +38,31 @@ export default function AdminLogin() {
       const result = (await response.json()) as { error?: string; next?: string };
       if (!response.ok) throw new Error(result.error || "No se pudo continuar.");
       if (sent) window.location.assign(result.next || "/admin");
-      else setSent(true);
+      else { setSent(true); restartResend(); }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo continuar.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resendCode() {
+    if (!canResend || busy) return;
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const response = await fetch("/api/auth/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: "admin", email }),
+      });
+      const result = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(result.error || "No se pudo reenviar el código.");
+      restartResend();
+      setNotice("Enviamos un código nuevo. Revisa también la carpeta de spam.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "No se pudo reenviar el código.");
     } finally {
       setBusy(false);
     }
@@ -52,7 +78,9 @@ export default function AdminLogin() {
         {!sent ? <div className="form-field"><Label htmlFor="admin-email">Correo administrador</Label><Input id="admin-email" type="email" className="field-control" value={email} onChange={event => setEmail(event.target.value)} required /></div> :
           <div className="form-field"><Label htmlFor="admin-otp">Código de verificación</Label><InputOTP id="admin-otp" maxLength={6} pattern={REGEXP_ONLY_DIGITS} value={token} onChange={setToken}><InputOTPGroup>{Array.from({ length: 6 }, (_, index) => <InputOTPSlot key={index} index={index} className="otp-slot" />)}</InputOTPGroup></InputOTP></div>}
         {error && <p role="alert" className="form-error">{error}</p>}
+        {notice && <p role="status" className="form-notice">{notice}</p>}
         <Button className="submit-button" type="submit" disabled={busy || (sent && token.length !== 6)}>{busy ? "Procesando…" : sent ? "Entrar" : "Enviar código"}</Button>
+        {sent && <div className="resend-row" aria-live="polite">{canResend ? <button type="button" className="resend-button" onClick={() => void resendCode()} disabled={busy}>Reenviar código</button> : <span>Podrás reenviar en {resendSeconds} s</span>}</div>}
       </form>
     </section>
   </main>;

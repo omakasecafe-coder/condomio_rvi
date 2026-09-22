@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useResendCountdown } from "@/lib/use-resend-countdown";
 
 type Stage = "document" | "code";
 
@@ -18,6 +19,8 @@ export default function Home() {
   const [token, setToken] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const { seconds: resendSeconds, restart: restartResend, reset: resetResend, canResend } = useResendCountdown();
   useEffect(() => { document.title = `${stage === "code" ? "Verificación" : "Acceso vendedor"} · Condomio MVP`; }, [stage]);
 
   useEffect(() => {
@@ -30,6 +33,7 @@ export default function Home() {
     event.preventDefault();
     setBusy(true);
     setError("");
+    setNotice("");
     try {
       const response = await fetch("/api/auth/start", {
         method: "POST",
@@ -39,8 +43,31 @@ export default function Home() {
       const result = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(result.error || "No se pudo solicitar el código.");
       setStage("code");
+      restartResend();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo solicitar el código.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resendCode() {
+    if (!canResend || busy) return;
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const response = await fetch("/api/auth/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documentType, documentNumber }),
+      });
+      const result = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(result.error || "No se pudo reenviar el código.");
+      restartResend();
+      setNotice("Enviamos un código nuevo. Revisa también la carpeta de spam.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "No se pudo reenviar el código.");
     } finally {
       setBusy(false);
     }
@@ -113,8 +140,10 @@ export default function Home() {
                 </InputOTP>
               </div>
               {error && <p role="alert" className="form-error">{error}</p>}
+              {notice && <p role="status" className="form-notice">{notice}</p>}
               <Button type="submit" className="submit-button" disabled={busy || token.length !== 6}>{busy ? "Verificando…" : "Entrar al portal"}</Button>
-              <button type="button" className="back-button" onClick={() => { setStage("document"); setToken(""); setError(""); }}>Usar otro documento</button>
+              <div className="resend-row" aria-live="polite">{canResend ? <button type="button" className="resend-button" onClick={() => void resendCode()} disabled={busy}>Reenviar código</button> : <span>Podrás reenviar en {resendSeconds} s</span>}</div>
+              <button type="button" className="back-button" onClick={() => { setStage("document"); setToken(""); setError(""); setNotice(""); resetResend(); }}>Usar otro documento</button>
             </form>
           )}
           <p className="login-foot">El código solo se envía al correo registrado. Si necesitas actualizarlo, contacta a administración de Condomio.</p>
