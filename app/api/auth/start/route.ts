@@ -8,6 +8,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Solicitud no permitida." }, { status: 403 });
   }
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
+  const origin = new URL(request.url).origin;
   if (body?.role === "applicant") {
     if (process.env.APPLICATIONS_ENABLED !== "true") return NextResponse.json({ error: "Las postulaciones todavía no están habilitadas." }, { status: 503 });
     const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
@@ -15,12 +16,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Ingresa un correo válido." }, { status: 400 });
     }
     try {
-      const result = await publicAuthClient().auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+      const result = await publicAuthClient().auth.signInWithOtp({ email, options: { shouldCreateUser: true, emailRedirectTo: `${origin}/auth/callback?purpose=applicant` } });
       if (result.error) throw result.error;
       return NextResponse.json({ ok: true });
     } catch (error) {
       console.error("Applicant OTP request failed", error);
-      return NextResponse.json({ error: "No se pudo enviar el código." }, { status: 503 });
+      return NextResponse.json({ error: "No se pudo enviar el enlace." }, { status: 503 });
     }
   }
   if (body?.role === "admin") {
@@ -29,13 +30,13 @@ export async function POST(request: Request) {
     if (!email || !allowed) return NextResponse.json({ error: "Acceso no configurado." }, { status: 503 });
     try {
       if (email === allowed) {
-        const result = await publicAuthClient().auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+        const result = await publicAuthClient().auth.signInWithOtp({ email, options: { shouldCreateUser: true, emailRedirectTo: `${origin}/auth/callback?purpose=admin` } });
         if (result.error) throw result.error;
       }
       return NextResponse.json({ ok: true });
     } catch (error) {
       console.error("Admin OTP request failed", error);
-      return NextResponse.json({ error: "No se pudo enviar el código." }, { status: 503 });
+      return NextResponse.json({ error: "No se pudo enviar el enlace." }, { status: 503 });
     }
   }
   const document = normalizeDocument(body?.documentType, body?.documentNumber);
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
     if (data?.status === "ACTIVE") {
       const result = await publicAuthClient().auth.signInWithOtp({
         email: data.email,
-        options: { shouldCreateUser: false },
+        options: { shouldCreateUser: false, emailRedirectTo: `${origin}/auth/callback?purpose=seller` },
       });
       if (result.error) throw result.error;
     }
@@ -61,6 +62,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("OTP request failed", error);
-    return NextResponse.json({ error: "No se pudo enviar el código. Inténtalo más tarde." }, { status: 503 });
+    return NextResponse.json({ error: "No se pudo enviar el enlace. Inténtalo más tarde." }, { status: 503 });
   }
 }

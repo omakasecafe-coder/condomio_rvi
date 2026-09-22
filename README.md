@@ -1,12 +1,12 @@
 # Condomio · Red Comercial Independiente (MVP)
 
-Aplicación de postulación, portal de vendedores y administración comercial. Está preparada para Cloudflare Workers y Supabase. La postulación pública permanece desactivada hasta contar con condiciones oficiales y correo OTP operativo.
+Aplicación de postulación, portal de vendedores y administración comercial. Está preparada para Cloudflare Workers y Supabase. La postulación pública permanece desactivada hasta contar con condiciones oficiales y el correo de acceso probado.
 
 ## Funcionalidad
 
 - Postulación con verificación del correo, evaluación actitudinal y evaluación comercial. Las respuestas se corrigen en el servidor.
 - Validación final con foto de identidad en un bucket privado, cuenta bancaria, CCI y aceptación versionada de condiciones. Esta etapa se habilita solo cuando se configura el documento oficial.
-- Acceso de vendedores mediante tipo/número de documento y código OTP al correo registrado.
+- Acceso de vendedores mediante tipo/número de documento y un Magic Link de un solo uso enviado al correo registrado.
 - Vendedores: perfil de solo lectura, registro de edificios y oportunidades, seguimiento de estados y comisiones.
 - Administración: valida contrato firmado para marcar **Ganado** y registra comisiones **Pagado**. La comisión se calcula como precio unitario × departamentos.
 - Las rutas `?demo=1` de ambos portales muestran datos ficticios y no guardan cambios.
@@ -30,15 +30,15 @@ Las migraciones de `supabase/migrations/` ya están aplicadas al proyecto Supaba
 
 Configura `SUPABASE_SERVICE_ROLE_KEY` como secreto del Worker en Cloudflare. La aplicación usa esa clave **solo en el servidor**. Para desarrollo local puedes usar un archivo `.dev.vars` ignorado por Git.
 
-Cuando Condomio entregue los documentos oficiales, configura `TERMS_URL` (enlace HTTPS), `TERMS_VERSION` (identificador de versión) y opcionalmente `MATERIALS_URL` (enlace HTTPS). Activa `APPLICATIONS_ENABLED=true` solo después de verificar el correo OTP, revisar las condiciones y probar el flujo completo. Mientras esté en `false`, nadie puede enviar postulaciones reales.
+Cuando Condomio entregue los documentos oficiales, configura `TERMS_URL` (enlace HTTPS), `TERMS_VERSION` (identificador de versión) y opcionalmente `MATERIALS_URL` (enlace HTTPS). Activa `APPLICATIONS_ENABLED=true` solo después de verificar el Magic Link, revisar las condiciones y probar el flujo completo. Mientras esté en `false`, nadie puede enviar postulaciones reales.
 
-El administrador autorizado es `pdongoi@data-prix.com`. Su acceso también requiere OTP al correo.
+El administrador autorizado es `pdongoi@data-prix.com`. Su acceso también requiere un Magic Link enviado a ese correo.
 
-## OTP por Gmail
+## Correo de acceso
 
-Supabase Auth necesita un servidor SMTP personalizado para enviar códigos a vendedores externos. En Supabase, configura **Authentication → SMTP Settings** con la cuenta de Gmail elegida, `smtp.gmail.com`, puerto 465 o 587 y una **contraseña de aplicación** de Google. Activa antes la verificación en dos pasos de esa cuenta. Introduce la contraseña directamente en Supabase, nunca en GitHub ni en este chat. Configura la plantilla de correo para mostrar el código `{{ .Token }}` y prueba el envío antes de activar postulaciones.
+Supabase Auth envía un Magic Link de un solo uso. La URL pública `/auth/callback` recibe la sesión y dirige al usuario a administración, al portal de vendedores o a la continuación de su postulación después de validar su autorización en el servidor. Para usar un remitente propio y mejorar la entrega, configura **Authentication → SMTP Settings**. Las credenciales SMTP deben introducirse directamente en Supabase, nunca en GitHub ni en este chat.
 
-Referencias: [SMTP de Supabase](https://supabase.com/docs/guides/auth/auth-smtp), [Google: contraseñas de aplicación](https://support.google.com/accounts/answer/185833), [OTP de Supabase](https://supabase.com/docs/guides/auth/auth-email-passwordless).
+Referencias: [SMTP de Supabase](https://supabase.com/docs/guides/auth/auth-smtp), [Magic Link de Supabase](https://supabase.com/docs/guides/auth/auth-email-passwordless).
 
 ## GitHub y Cloudflare
 
@@ -57,6 +57,6 @@ Referencia: [Cloudflare Workers Builds](https://developers.cloudflare.com/worker
 ## Pendientes de operación
 
 - Documento oficial de condiciones y materiales comerciales de Condomio.
-- Configuración y prueba de Gmail SMTP en Supabase.
+- Configuración opcional de SMTP propio en Supabase.
 - Secreto `SUPABASE_SERVICE_ROLE_KEY` en Cloudflare.
 - Revisión funcional con usuarios de prueba antes de activar `APPLICATIONS_ENABLED`.

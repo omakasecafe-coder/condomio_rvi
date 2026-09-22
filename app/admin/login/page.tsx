@@ -1,71 +1,57 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { REGEXP_ONLY_DIGITS } from "input-otp";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Label } from "@/components/ui/label";
 import { useResendCountdown } from "@/lib/use-resend-countdown";
 
 export default function AdminLogin() {
   const [email, setEmail] = useState("");
-  const [token, setToken] = useState("");
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const { seconds: resendSeconds, restart: restartResend, canResend } = useResendCountdown();
-  useEffect(() => { document.title = `${sent ? "Verificación admin" : "Acceso admin"} · Condomio MVP`; }, [sent]);
+  const { seconds: resendSeconds, restart: restartResend, reset: resetResend, canResend } = useResendCountdown();
 
-  useEffect(() => {
-    // This query parameter exists only for deterministic demo screenshots.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (new URLSearchParams(window.location.search).get("vista") === "otp") setSent(true);
-  }, []);
+  useEffect(() => { document.title = `${sent ? "Enlace enviado" : "Acceso admin"} · Condomio MVP`; }, [sent]);
+
+  async function sendLink() {
+    const response = await fetch("/api/auth/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role: "admin", email }),
+    });
+    const result = (await response.json()) as { error?: string };
+    if (!response.ok) throw new Error(result.error || "No se pudo enviar el enlace.");
+  }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setBusy(true);
-    setError("");
-    setNotice("");
+    setBusy(true); setError(""); setNotice("");
     try {
-      const response = await fetch(sent ? "/api/auth/verify" : "/api/auth/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role: "admin", email, token }),
-      });
-      const result = (await response.json()) as { error?: string; next?: string };
-      if (!response.ok) throw new Error(result.error || "No se pudo continuar.");
-      if (sent) window.location.assign(result.next || "/admin");
-      else { setSent(true); restartResend(); }
+      await sendLink();
+      setSent(true);
+      restartResend();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "No se pudo continuar.");
-    } finally {
-      setBusy(false);
-    }
+      setError(cause instanceof Error ? cause.message : "No se pudo enviar el enlace.");
+    } finally { setBusy(false); }
   }
 
-  async function resendCode() {
+  async function resendLink() {
     if (!canResend || busy) return;
-    setBusy(true);
-    setError("");
-    setNotice("");
+    setBusy(true); setError(""); setNotice("");
     try {
-      const response = await fetch("/api/auth/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role: "admin", email }),
-      });
-      const result = (await response.json()) as { error?: string };
-      if (!response.ok) throw new Error(result.error || "No se pudo reenviar el código.");
+      await sendLink();
       restartResend();
-      setNotice("Enviamos un código nuevo. Revisa también la carpeta de spam.");
+      setNotice("Enviamos un enlace nuevo. Revisa también la carpeta de spam.");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "No se pudo reenviar el código.");
-    } finally {
-      setBusy(false);
-    }
+      setError(cause instanceof Error ? cause.message : "No se pudo reenviar el enlace.");
+    } finally { setBusy(false); }
+  }
+
+  function changeEmail() {
+    setSent(false); setError(""); setNotice(""); resetResend();
   }
 
   return <main className="mvp-shell admin-login-shell">
@@ -73,15 +59,17 @@ export default function AdminLogin() {
     <section className="login-card admin-login-card">
       <span className="card-kicker">ACCESO ADMINISTRATIVO</span>
       <h1>{sent ? "Revisa tu correo" : "Ingresa a administración"}</h1>
-      <p>{sent ? "Escribe el código enviado al correo autorizado." : "El acceso está limitado al correo administrador registrado."}</p>
-      <form className="login-form" onSubmit={submit}>
-        {!sent ? <div className="form-field"><Label htmlFor="admin-email">Correo administrador</Label><Input id="admin-email" type="email" className="field-control" value={email} onChange={event => setEmail(event.target.value)} required /></div> :
-          <div className="form-field"><Label htmlFor="admin-otp">Código de verificación</Label><InputOTP id="admin-otp" maxLength={6} pattern={REGEXP_ONLY_DIGITS} value={token} onChange={setToken}><InputOTPGroup>{Array.from({ length: 6 }, (_, index) => <InputOTPSlot key={index} index={index} className="otp-slot" />)}</InputOTPGroup></InputOTP></div>}
+      <p>{sent ? <>Enviamos un enlace de acceso a <strong>{email}</strong>. Ábrelo para entrar a administración.</> : "El acceso está limitado al correo administrador registrado."}</p>
+      {!sent ? <form className="login-form" onSubmit={submit}>
+        <div className="form-field"><Label htmlFor="admin-email">Correo administrador</Label><Input id="admin-email" type="email" className="field-control" value={email} onChange={event => setEmail(event.target.value)} required /></div>
+        {error && <p role="alert" className="form-error">{error}</p>}
+        <Button className="submit-button" type="submit" disabled={busy}>{busy ? "Enviando…" : "Enviar enlace de acceso"}</Button>
+      </form> : <div className="login-form">
         {error && <p role="alert" className="form-error">{error}</p>}
         {notice && <p role="status" className="form-notice">{notice}</p>}
-        <Button className="submit-button" type="submit" disabled={busy || (sent && token.length !== 6)}>{busy ? "Procesando…" : sent ? "Entrar" : "Enviar código"}</Button>
-        {sent && <div className="resend-row" aria-live="polite">{canResend ? <button type="button" className="resend-button" onClick={() => void resendCode()} disabled={busy}>Reenviar código</button> : <span>Podrás reenviar en {resendSeconds} s</span>}</div>}
-      </form>
+        <div className="resend-row" aria-live="polite">{canResend ? <button type="button" className="resend-button" onClick={() => void resendLink()} disabled={busy}>{busy ? "Reenviando…" : "Reenviar enlace"}</button> : <span>Podrás reenviar en {resendSeconds} s</span>}</div>
+        <button type="button" className="back-button" onClick={changeEmail}>Usar otro correo</button>
+      </div>}
     </section>
   </main>;
 }
