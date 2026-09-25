@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Search, SlidersHorizontal, UserRound, ClipboardCheck, Building2, Plus, Trash2, Pencil, History } from "lucide-react";
+import { Search, SlidersHorizontal, UserRound, ClipboardCheck, Building2, Plus, Trash2, Pencil, History, Eye, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -33,7 +33,7 @@ type AssessmentSet = {
   published_at: string | null; created_at: string; updated_at: string; assessment_questions: Question[];
 };
 type Opportunity = { id: string; plan: string; unit_price_cents: number; status: string; commission_cents: number | null; payment_status: string | null };
-type Building = { id: string; building_name: string; apartments: number; district: string; seller_profiles: { first_name: string; paternal_surname: string }; opportunities: Opportunity[] };
+type Building = { id: string; seller_id: string; building_name: string; apartments: number; district: string; seller_profiles: { id: string; first_name: string; paternal_surname: string }; opportunities: Opportunity[] };
 type AdminData = { applicants: Applicant[]; assessmentSets: AssessmentSet[]; buildings: Building[] };
 type Item = { building: Building; opportunity: Opportunity };
 
@@ -76,7 +76,9 @@ export default function AdminPage() {
   const [query, setQuery] = useState("");
   const [stage, setStage] = useState("ALL");
   const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(null);
+  const [selectedSeller, setSelectedSeller] = useState<Applicant | null>(null);
   const [editingSet, setEditingSet] = useState<AssessmentSet | null>(null);
+  const [viewingSet, setViewingSet] = useState<AssessmentSet | null>(null);
 
   const reload = useCallback(async () => {
     if (new URLSearchParams(window.location.search).get("demo") === "1") {
@@ -143,12 +145,24 @@ export default function AdminPage() {
     finally { setBusy(null); }
   }
 
+  async function setSellerStatus(seller: Applicant, status: "ACTIVE" | "SUSPENDED") {
+    setBusy(seller.id); setError(""); setNotice("");
+    try {
+      await post({ action: "setSellerStatus", sellerId: seller.id, status });
+      setSelectedSeller(null); await reload();
+      setNotice(status === "SUSPENDED" ? "El vendedor quedó suspendido." : "El vendedor fue reactivado.");
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "No se pudo actualizar al vendedor."); }
+    finally { setBusy(null); }
+  }
+
   const applicants = useMemo(() => data.applicants.filter(applicant => {
     const text = `${applicant.first_name} ${applicant.paternal_surname} ${applicant.maternal_surname} ${applicant.email} ${applicant.document_number}`.toLowerCase();
-    return text.includes(query.toLowerCase()) && (stage === "ALL" || applicant.application_stage === stage);
+    return !["ACTIVE", "SUSPENDED"].includes(applicant.status) && text.includes(query.toLowerCase()) && (stage === "ALL" || applicant.application_stage === stage);
   }), [data.applicants, query, stage]);
-  const active = data.applicants.filter(item => item.status === "ACTIVE").length;
-  const passed = data.applicants.filter(item => latestAttempt(item, "ATTITUDINAL")?.passed && latestAttempt(item, "APTITUDINAL")?.passed).length;
+  const applicantRecords = data.applicants.filter(item => !["ACTIVE", "SUSPENDED"].includes(item.status));
+  const sellerRecords = data.applicants.filter(item => ["ACTIVE", "SUSPENDED"].includes(item.status));
+  const active = sellerRecords.filter(item => item.status === "ACTIVE").length;
+  const passed = applicantRecords.filter(item => latestAttempt(item, "ATTITUDINAL")?.passed && latestAttempt(item, "APTITUDINAL")?.passed).length;
   const all = data.buildings.flatMap(building => building.opportunities.map(opportunity => ({ building, opportunity })));
   const pending = all.filter(item => item.opportunity.status === "NEGOCIACIÓN");
   const won = all.filter(item => item.opportunity.status === "GANADO");
@@ -165,6 +179,7 @@ export default function AdminPage() {
       <Tabs defaultValue="applicants" className="admin-tabs">
         <TabsList variant="line" className="admin-tab-list">
           <TabsTrigger value="applicants"><UserRound /> Postulantes</TabsTrigger>
+          <TabsTrigger value="sellers"><UserCheck /> Vendedores</TabsTrigger>
           <TabsTrigger value="assessments"><ClipboardCheck /> Evaluaciones</TabsTrigger>
           <TabsTrigger value="commercial"><Building2 /> Gestión comercial</TabsTrigger>
         </TabsList>
@@ -192,6 +207,28 @@ export default function AdminPage() {
           </div>
         </TabsContent>
 
+        <TabsContent value="sellers" className="admin-tab-panel">
+          <div className="section-title"><h2>Maestra de vendedores</h2><span>{sellerRecords.length} vendedores</span></div>
+          <div className="admin-table-card">
+            {loading ? <p className="empty-state">Cargando vendedores…</p> : sellerRecords.length ? <Table>
+              <TableHeader><TableRow><TableHead>Vendedor</TableHead><TableHead>Estado</TableHead><TableHead>Edificios</TableHead><TableHead>Oportunidades</TableHead><TableHead>Comisiones ganadas</TableHead><TableHead><span className="sr-only">Acciones</span></TableHead></TableRow></TableHeader>
+              <TableBody>{sellerRecords.map(seller => {
+                const buildings = data.buildings.filter(building => building.seller_id === seller.id);
+                const opportunities = buildings.flatMap(building => building.opportunities);
+                const commissions = opportunities.filter(item => item.status === "GANADO").reduce((sum, item) => sum + Number(item.commission_cents || 0), 0);
+                return <TableRow key={seller.id}>
+                  <TableCell><button className="person-cell" onClick={() => setSelectedSeller(seller)}><span>{seller.first_name.charAt(0)}{seller.paternal_surname.charAt(0)}</span><span><strong>{seller.first_name} {seller.paternal_surname}</strong><small>{seller.email}</small></span></button></TableCell>
+                  <TableCell><StageChip stage={seller.status} /></TableCell>
+                  <TableCell>{buildings.length}</TableCell>
+                  <TableCell>{opportunities.length}</TableCell>
+                  <TableCell><strong>{money(commissions)}</strong></TableCell>
+                  <TableCell><Button variant="outline" size="sm" onClick={() => setSelectedSeller(seller)}>Administrar</Button></TableCell>
+                </TableRow>;
+              })}</TableBody>
+            </Table> : <p className="empty-state">Todavía no hay vendedores activos o suspendidos.</p>}
+          </div>
+        </TabsContent>
+
         <TabsContent value="assessments" className="admin-tab-panel">
           <div className="assessment-grid">{(["ATTITUDINAL", "APTITUDINAL"] as AssessmentKind[]).map(kind => {
             const sets = data.assessmentSets.filter(item => item.kind === kind);
@@ -200,6 +237,7 @@ export default function AdminPage() {
             return <section className="assessment-card" key={kind}>
               <div className="assessment-card-head"><div><span className="assessment-icon">{kind === "ATTITUDINAL" ? "A" : "P"}</span><div><span className="record-label">EVALUACIÓN {kindLabels[kind].toUpperCase()}</span><h2>{published?.name || kindLabels[kind]}</h2></div></div><span className="status-chip paid">Publicada</span></div>
               <div className="assessment-summary"><div><span>Versión activa</span><strong>v{published?.version ?? "—"}</strong></div><div><span>Preguntas</span><strong>{published?.assessment_questions.length ?? 0}</strong></div><div><span>Nota mínima</span><strong>{published?.pass_percentage ?? 0}%</strong></div><div><span>Intentos</span><strong>{published?.allowed_attempts ?? 0}</strong></div></div>
+              {published && <Button variant="outline" className="view-questions-button" onClick={() => setViewingSet(normalizeSet(published))}><Eye /> Ver preguntas y respuestas</Button>}
               {draft ? <div className="draft-row"><div><strong>Borrador v{draft.version}</strong><span>Actualizado {date(draft.updated_at)}</span></div><Button onClick={() => setEditingSet(normalizeSet(draft))}><Pencil /> Editar borrador</Button></div>
                 : <Button variant="outline" className="new-version-button" disabled={busy === kind || demo} onClick={() => void createVersion(kind)}><Plus /> Crear nueva versión</Button>}
               <div className="version-history"><History /><span>{sets.filter(item => item.status === "ARCHIVED").length} versiones archivadas</span></div>
@@ -219,6 +257,8 @@ export default function AdminPage() {
     </section>
 
     <ApplicantDialog applicant={selectedApplicant} onClose={() => setSelectedApplicant(null)} />
+    <SellerDialog seller={selectedSeller} buildings={data.buildings.filter(building => building.seller_id === selectedSeller?.id)} busy={busy === selectedSeller?.id} onClose={() => setSelectedSeller(null)} onStatusChange={setSellerStatus} />
+    <AssessmentViewer set={viewingSet} onClose={() => setViewingSet(null)} />
     <AssessmentEditor set={editingSet} busy={busy === editingSet?.id} onChange={setEditingSet} onClose={() => setEditingSet(null)} onSave={saveSet} />
   </main>;
 }
@@ -245,6 +285,30 @@ function ApplicantDialog({ applicant, onClose }: { applicant: Applicant | null; 
 
 function normalizeSet(set: AssessmentSet): AssessmentSet {
   return { ...set, assessment_questions: [...set.assessment_questions].sort((a, b) => a.position - b.position).map(question => ({ ...question, options: [...question.options] })) };
+}
+
+function SellerDialog({ seller, buildings, busy, onClose, onStatusChange }: { seller: Applicant | null; buildings: Building[]; busy: boolean; onClose: () => void; onStatusChange: (seller: Applicant, status: "ACTIVE" | "SUSPENDED") => Promise<void> }) {
+  const opportunities = buildings.flatMap(building => building.opportunities);
+  return <Dialog open={!!seller} onOpenChange={open => { if (!open) onClose(); }}>
+    <DialogContent className="applicant-dialog">
+      {seller && <><DialogHeader><DialogTitle>{seller.first_name} {seller.paternal_surname} {seller.maternal_surname}</DialogTitle><DialogDescription>{seller.document_type} {seller.document_number} · {seller.email}</DialogDescription></DialogHeader>
+        <div className="applicant-overview"><StageChip stage={seller.status} /><div><span>Teléfono</span><strong>{seller.phone}</strong></div><div><span>Edificios registrados</span><strong>{buildings.length}</strong></div><div><span>Oportunidades</span><strong>{opportunities.length}</strong></div></div>
+        <section className="seller-building-list"><h3>Actividad comercial</h3>{buildings.length ? buildings.map(building => <article key={building.id}><div><strong>{building.building_name}</strong><span>{building.district} · {building.apartments} departamentos</span></div><span>{building.opportunities.length} oportunidades</span></article>) : <p className="empty-state">Aún no registra edificios.</p>}</section>
+        <DialogFooter>{seller.status === "ACTIVE" ? <Button variant="destructive" disabled={busy} onClick={() => void onStatusChange(seller, "SUSPENDED")}>{busy ? "Guardando…" : "Suspender vendedor"}</Button> : <Button disabled={busy} onClick={() => void onStatusChange(seller, "ACTIVE")}>{busy ? "Guardando…" : "Reactivar vendedor"}</Button>}</DialogFooter>
+      </>}
+    </DialogContent>
+  </Dialog>;
+}
+
+function AssessmentViewer({ set, onClose }: { set: AssessmentSet | null; onClose: () => void }) {
+  return <Dialog open={!!set} onOpenChange={open => { if (!open) onClose(); }}>
+    <DialogContent className="assessment-dialog assessment-viewer">
+      {set && <><DialogHeader><DialogTitle>{set.name} · v{set.version}</DialogTitle><DialogDescription>Versión publicada · nota mínima {set.pass_percentage}% · {set.allowed_attempts} intento{set.allowed_attempts === 1 ? "" : "s"}.</DialogDescription></DialogHeader>
+        <div className="published-question-list">{set.assessment_questions.map((question, index) => <article key={question.id || index}><div className="question-view-head"><strong>Pregunta {index + 1}</strong>{question.is_knockout && <span>Eliminatoria</span>}</div><h3>{question.prompt}</h3><ol>{question.options.map((option, optionIndex) => <li key={option} className={question.correct_option === optionIndex ? "correct-answer" : ""}><span>{String.fromCharCode(65 + optionIndex)}</span><p>{option}</p>{question.correct_option === optionIndex && <strong>Correcta</strong>}</li>)}</ol></article>)}</div>
+        <DialogFooter><Button variant="outline" onClick={onClose}>Cerrar</Button></DialogFooter>
+      </>}
+    </DialogContent>
+  </Dialog>;
 }
 
 function AssessmentEditor({ set, busy, onChange, onClose, onSave }: { set: AssessmentSet | null; busy: boolean; onChange: (set: AssessmentSet | null) => void; onClose: () => void; onSave: (set: AssessmentSet, publish?: boolean) => Promise<void> }) {

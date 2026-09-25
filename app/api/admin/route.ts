@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
         .select("id,kind,name,version,status,pass_percentage,allowed_attempts,randomize_questions,published_at,created_at,updated_at,assessment_questions(id,position,prompt,options,correct_option,is_knockout)")
         .order("version", { ascending: false }),
       context.client.from("buildings")
-        .select("id,building_name,apartments,district,seller_profiles!inner(first_name,paternal_surname),opportunities(id,plan,unit_price_cents,status,commission_cents,payment_status)")
+        .select("id,seller_id,building_name,apartments,district,seller_profiles!inner(id,first_name,paternal_surname),opportunities(id,plan,unit_price_cents,status,commission_cents,payment_status)")
         .order("created_at", { ascending: false }),
     ]);
     if (profilesResult.error) throw profilesResult.error;
@@ -78,6 +78,12 @@ const publishSetAction = z.object({
   setId: z.string().uuid(),
 });
 
+const sellerStatusAction = z.object({
+  action: z.literal("setSellerStatus"),
+  sellerId: z.string().uuid(),
+  status: z.enum(["ACTIVE", "SUSPENDED"]),
+});
+
 export async function POST(request: NextRequest) {
   if (request.headers.get("origin") && request.headers.get("origin") !== new URL(request.url).origin) {
     return NextResponse.json({ error: "Solicitud no permitida." }, { status: 403 });
@@ -123,6 +129,16 @@ export async function POST(request: NextRequest) {
       return context.respond({ ok: true });
     }
 
+    const sellerStatus = sellerStatusAction.safeParse(body);
+    if (sellerStatus.success) {
+      const { error } = await context.client.rpc("admin_set_seller_status", {
+        p_seller_id: sellerStatus.data.sellerId,
+        p_status: sellerStatus.data.status,
+      });
+      if (error) throw error;
+      return context.respond({ ok: true });
+    }
+
     const parsed = commercialAction.safeParse(body);
     if (!parsed.success) return context.respond({ error: "Solicitud inválida." }, 400);
     const { data: opportunity, error: lookupError } = await context.client.from("opportunities")
@@ -163,4 +179,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No se pudo guardar el cambio." }, { status: 503 });
   }
 }
-
