@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { normalizeDocument, serviceClient } from "@/lib/auth-config";
-import { gradeAssessment } from "@/lib/assessment";
+import { normalizeDocument, publicAuthClient, serviceClient } from "@/lib/auth-config";
 import { requestSession } from "@/lib/request-session";
 
 export const dynamic = "force-dynamic";
@@ -18,19 +17,25 @@ const profileFields = z.object({
 });
 
 const answersFields = z.object({
-  action: z.enum(["attitude", "commercial"]),
-  answers: z.array(z.number().int().min(0).max(2)).length(4),
+  action: z.enum(["attitude", "aptitude"]),
+  setId: z.string().uuid(),
+  answers: z.array(z.object({
+    questionId: z.string().uuid(),
+    optionIndex: z.number().int().min(0).max(5),
+  })).min(1).max(50),
 });
 
 export async function GET() {
   const termsUrl = process.env.TERMS_URL?.trim() || "";
   const termsVersion = process.env.TERMS_VERSION?.trim() || "";
   const materialUrl = process.env.MATERIALS_URL?.trim() || "";
+  const { data: assessments, error } = await publicAuthClient().rpc("get_published_assessments");
   return NextResponse.json({
     termsUrl: /^https:\/\//.test(termsUrl) ? termsUrl : null,
     termsVersion: /^https:\/\//.test(termsUrl) ? termsVersion || null : null,
     materialsUrl: /^https:\/\//.test(materialUrl) ? materialUrl : null,
     acceptingApplications: process.env.APPLICATIONS_ENABLED === "true" && /^https:\/\//.test(termsUrl) && !!termsVersion,
+    assessments: error ? [] : assessments,
   }, { headers: { "Cache-Control": "no-store" } });
 }
 
@@ -51,8 +56,8 @@ export async function POST(request: NextRequest) {
     const userEmail = user.email;
     if (!userEmail) return context.respond({ error: "Verifica primero tu correo electrónico." }, 401);
     const db = serviceClient();
-    const { data: profile, error: profileError } = await db.from("seller_profiles")
-      .select("id,status,attitude_score,knowledge_score,identity_document_path")
+    const { data: profile, error: profileError } = await context.client.from("seller_profiles")
+      .select("id,status,attitude_score,aptitude_score,knowledge_score,identity_document_path")
       .eq("auth_user_id", user.id).maybeSingle();
     if (profileError) throw profileError;
 
@@ -108,7 +113,7 @@ export async function POST(request: NextRequest) {
       if (!document || data.email.trim().toLowerCase() !== userEmail.toLowerCase()) {
         return context.respond({ error: "El documento o el correo no coinciden con la verificación." }, 400);
       }
-      const { error } = await db.from("seller_profiles").insert({
+      const { error } = await context.client.from("seller_profiles").insert({
         auth_user_id: user.id,
         document_type: document.documentType,
         document_number: document.documentNumber,
@@ -119,6 +124,7 @@ export async function POST(request: NextRequest) {
         birth_date: data.birthDate,
         phone: data.phone,
         status: "APPLICANT",
+        application_stage: "ACTITUDINAL",
       });
       if (error) {
         if (error.code === "23505") return context.respond({ error: "Este documento ya tiene una postulación. Contacta a administración." }, 409);
@@ -132,22 +138,18 @@ export async function POST(request: NextRequest) {
       return context.respond({ error: "No puedes realizar esta evaluación." }, 403);
     }
     const { action, answers } = parsed.data;
-    if (action === "attitude" && profile.attitude_score !== null) {
-      return context.respond({ error: "La evaluación actitudinal ya fue registrada." }, 409);
-    }
-    if (action === "commercial" && (profile.attitude_score ?? 0) < 3) {
+    if (action === "aptitude" && profile.attitude_score === null) {
       return context.respond({ error: "Primero debes aprobar la evaluación actitudinal." }, 403);
     }
-    const score = gradeAssessment(action, answers);
-    const passed = score >= 3;
-    const changes = action === "attitude"
-      ? { attitude_score: score, status: passed ? "APPLICANT" : "REJECTED", updated_at: new Date().toISOString() }
-      : { knowledge_score: score, updated_at: new Date().toISOString() };
-    const { error } = await db.from("seller_profiles").update(changes).eq("id", profile.id);
+    const { data: result, error } = await context.client.rpc("submit_assessment_attempt", {
+      p_set_id: parsed.data.setId,
+      p_answers: answers.map(answer => ({ question_id: answer.questionId, option_index: answer.optionIndex })),
+    });
     if (error) throw error;
-    return context.respond({ ok: true, passed });
+    return context.respond({ ok: true, ...(result as Record<string, unknown>) });
   } catch (error) {
     console.error("Applicant update failed", error);
     return NextResponse.json({ error: "No se pudo guardar la postulación." }, { status: 503 });
   }
 }
+

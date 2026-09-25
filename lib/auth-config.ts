@@ -3,11 +3,10 @@ import { createClient } from "@supabase/supabase-js";
 export function authSettings() {
   const url = process.env.SUPABASE_URL;
   const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !publishableKey || !serviceRoleKey) {
+  if (!url || !publishableKey) {
     throw new Error("La autenticación todavía no está configurada.");
   }
-  return { url, publishableKey, serviceRoleKey };
+  return { url, publishableKey };
 }
 
 export function publicAuthClient() {
@@ -18,7 +17,9 @@ export function publicAuthClient() {
 }
 
 export function serviceClient() {
-  const { url, serviceRoleKey } = authSettings();
+  const { url } = authSettings();
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceRoleKey) throw new Error("La operación administrativa todavía no está configurada.");
   return createClient(url, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   });
@@ -33,3 +34,4 @@ export function normalizeDocument(type: unknown, number: unknown) {
   }
   return { documentType, documentNumber };
 }
+
