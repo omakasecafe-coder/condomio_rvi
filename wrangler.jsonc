@@ -9,6 +9,6 @@
     "SUPABASE_URL": "https://yttwbvrmdldtabmerlmd.supabase.co",
     "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_PXHsXiUAluySbTu5MAVy6g_7bNrQaed",
     "ADMIN_EMAIL": "pdongoi@data-prix.com",
-    "APPLICATIONS_ENABLED": "false"
+    "APPLICATIONS_ENABLED": "true"
   }
 }
