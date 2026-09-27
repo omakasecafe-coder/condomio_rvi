@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { attitudeQuestions, commercialQuestions, type AssessmentQuestion as SampleQuestion } from "@/lib/questions";
 
 type AssessmentKind = "ATTITUDINAL" | "APTITUDINAL";
 type Attempt = {
@@ -46,6 +47,8 @@ const money = (cents: number) => `S/ ${(cents / 100).toLocaleString("es-PE", { m
 const date = (value: string) => new Intl.DateTimeFormat("es-PE", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value));
 const latestAttempt = (applicant: Applicant, kind: AssessmentKind) =>
   [...(applicant.assessment_attempts || [])].filter(item => item.kind === kind).sort((a, b) => b.attempt_number - a.attempt_number)[0];
+const sampleQuestions = (questions: readonly SampleQuestion[], correct: readonly number[]): Question[] =>
+  questions.map((question, index) => ({ id: `sample-${index + 1}`, position: index + 1, prompt: question.question, options: [...question.options], correct_option: correct[index], is_knockout: false }));
 
 const sampleData: AdminData = {
   applicants: [
@@ -58,8 +61,8 @@ const sampleData: AdminData = {
     ] },
   ],
   assessmentSets: [
-    { id: "s-1", kind: "ATTITUDINAL", name: "Evaluación actitudinal", version: 1, status: "PUBLISHED", pass_percentage: 75, allowed_attempts: 1, questions_per_attempt: 4, randomize_questions: true, published_at: "2026-09-18T10:00:00Z", created_at: "2026-09-18T10:00:00Z", updated_at: "2026-09-18T10:00:00Z", assessment_questions: [] },
-    { id: "s-2", kind: "APTITUDINAL", name: "Evaluación aptitudinal comercial", version: 1, status: "PUBLISHED", pass_percentage: 75, allowed_attempts: 2, questions_per_attempt: 4, randomize_questions: true, published_at: "2026-09-18T10:00:00Z", created_at: "2026-09-18T10:00:00Z", updated_at: "2026-09-18T10:00:00Z", assessment_questions: [] },
+    { id: "s-1", kind: "ATTITUDINAL", name: "Evaluación actitudinal", version: 1, status: "PUBLISHED", pass_percentage: 75, allowed_attempts: 1, questions_per_attempt: 4, randomize_questions: true, published_at: "2026-09-18T10:00:00Z", created_at: "2026-09-18T10:00:00Z", updated_at: "2026-09-18T10:00:00Z", assessment_questions: sampleQuestions(attitudeQuestions, [1, 2, 0, 1]) },
+    { id: "s-2", kind: "APTITUDINAL", name: "Evaluación aptitudinal comercial", version: 1, status: "PUBLISHED", pass_percentage: 75, allowed_attempts: 2, questions_per_attempt: 4, randomize_questions: true, published_at: "2026-09-18T10:00:00Z", created_at: "2026-09-18T10:00:00Z", updated_at: "2026-09-18T10:00:00Z", assessment_questions: sampleQuestions(commercialQuestions, [0, 1, 0, 1]) },
   ],
   buildings: [],
 };
