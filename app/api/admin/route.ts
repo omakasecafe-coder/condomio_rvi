@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
         .select("id,document_type,document_number,email,first_name,paternal_surname,maternal_surname,birth_date,phone,status,application_stage,attitude_score,aptitude_score,identity_document_path,terms_accepted_at,created_at,updated_at,assessment_attempts(id,kind,attempt_number,score,max_score,percentage,passed,knockout_failed,completed_at,assessment_sets(name,version))")
         .order("created_at", { ascending: false }),
       context.client.from("assessment_sets")
-        .select("id,kind,name,version,status,pass_percentage,allowed_attempts,randomize_questions,published_at,created_at,updated_at,assessment_questions(id,position,prompt,options,correct_option,is_knockout)")
+        .select("id,kind,name,version,status,pass_percentage,allowed_attempts,questions_per_attempt,randomize_questions,published_at,created_at,updated_at,assessment_questions(id,position,prompt,options,correct_option,is_knockout)")
         .order("version", { ascending: false }),
       context.client.from("buildings")
         .select("id,seller_id,building_name,apartments,district,seller_profiles!inner(id,first_name,paternal_surname),opportunities(id,plan,unit_price_cents,status,commission_cents,payment_status)")
@@ -69,8 +69,11 @@ const saveSetAction = z.object({
   name: z.string().trim().min(3).max(120),
   passPercentage: z.number().int().min(1).max(100),
   allowedAttempts: z.number().int().min(1).max(5),
+  questionsPerAttempt: z.number().int().min(1).max(50),
   randomizeQuestions: z.boolean(),
   questions: z.array(questionInput).min(1).max(50),
+}).refine(value => value.questionsPerAttempt <= value.questions.length, {
+  message: "Las preguntas por examen no pueden superar el tamaño del banco",
 });
 
 const publishSetAction = z.object({
@@ -109,6 +112,7 @@ export async function POST(request: NextRequest) {
         p_name: data.name,
         p_pass_percentage: data.passPercentage,
         p_allowed_attempts: data.allowedAttempts,
+        p_questions_per_attempt: data.questionsPerAttempt,
         p_randomize_questions: data.randomizeQuestions,
         p_questions: data.questions.map(question => ({
           position: question.position,

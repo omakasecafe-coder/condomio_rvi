@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -29,7 +28,7 @@ type Question = {
 };
 type AssessmentSet = {
   id: string; kind: AssessmentKind; name: string; version: number; status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
-  pass_percentage: number; allowed_attempts: number; randomize_questions: boolean;
+  pass_percentage: number; allowed_attempts: number; questions_per_attempt: number; randomize_questions: boolean;
   published_at: string | null; created_at: string; updated_at: string; assessment_questions: Question[];
 };
 type Opportunity = { id: string; plan: string; unit_price_cents: number; status: string; commission_cents: number | null; payment_status: string | null };
@@ -59,8 +58,8 @@ const sampleData: AdminData = {
     ] },
   ],
   assessmentSets: [
-    { id: "s-1", kind: "ATTITUDINAL", name: "Evaluación actitudinal", version: 1, status: "PUBLISHED", pass_percentage: 75, allowed_attempts: 1, randomize_questions: false, published_at: "2026-09-18T10:00:00Z", created_at: "2026-09-18T10:00:00Z", updated_at: "2026-09-18T10:00:00Z", assessment_questions: [] },
-    { id: "s-2", kind: "APTITUDINAL", name: "Evaluación aptitudinal comercial", version: 1, status: "PUBLISHED", pass_percentage: 75, allowed_attempts: 2, randomize_questions: false, published_at: "2026-09-18T10:00:00Z", created_at: "2026-09-18T10:00:00Z", updated_at: "2026-09-18T10:00:00Z", assessment_questions: [] },
+    { id: "s-1", kind: "ATTITUDINAL", name: "Evaluación actitudinal", version: 1, status: "PUBLISHED", pass_percentage: 75, allowed_attempts: 1, questions_per_attempt: 4, randomize_questions: true, published_at: "2026-09-18T10:00:00Z", created_at: "2026-09-18T10:00:00Z", updated_at: "2026-09-18T10:00:00Z", assessment_questions: [] },
+    { id: "s-2", kind: "APTITUDINAL", name: "Evaluación aptitudinal comercial", version: 1, status: "PUBLISHED", pass_percentage: 75, allowed_attempts: 2, questions_per_attempt: 4, randomize_questions: true, published_at: "2026-09-18T10:00:00Z", created_at: "2026-09-18T10:00:00Z", updated_at: "2026-09-18T10:00:00Z", assessment_questions: [] },
   ],
   buildings: [],
 };
@@ -123,7 +122,7 @@ export default function AdminPage() {
       await post({
         action: "saveAssessmentSet", setId: set.id, name: set.name,
         passPercentage: set.pass_percentage, allowedAttempts: set.allowed_attempts,
-        randomizeQuestions: set.randomize_questions,
+        questionsPerAttempt: set.questions_per_attempt, randomizeQuestions: true,
         questions: set.assessment_questions.map((question, index) => ({
           position: index + 1, prompt: question.prompt, options: question.options,
           correctOption: question.correct_option, isKnockout: question.is_knockout,
@@ -236,7 +235,7 @@ export default function AdminPage() {
             const draft = sets.find(item => item.status === "DRAFT");
             return <section className="assessment-card" key={kind}>
               <div className="assessment-card-head"><div><span className="assessment-icon">{kind === "ATTITUDINAL" ? "A" : "P"}</span><div><span className="record-label">EVALUACIÓN {kindLabels[kind].toUpperCase()}</span><h2>{published?.name || kindLabels[kind]}</h2></div></div><span className="status-chip paid">Publicada</span></div>
-              <div className="assessment-summary"><div><span>Versión activa</span><strong>v{published?.version ?? "—"}</strong></div><div><span>Preguntas</span><strong>{published?.assessment_questions.length ?? 0}</strong></div><div><span>Nota mínima</span><strong>{published?.pass_percentage ?? 0}%</strong></div><div><span>Intentos</span><strong>{published?.allowed_attempts ?? 0}</strong></div></div>
+              <div className="assessment-summary"><div><span>Versión activa</span><strong>v{published?.version ?? "—"}</strong></div><div><span>Banco</span><strong>{published?.assessment_questions.length ?? 0}</strong></div><div><span>Por examen</span><strong>{published?.questions_per_attempt ?? 0}</strong></div><div><span>Nota mínima</span><strong>{published?.pass_percentage ?? 0}%</strong></div><div><span>Intentos</span><strong>{published?.allowed_attempts ?? 0}</strong></div></div>
               {published && <Button variant="outline" className="view-questions-button" onClick={() => setViewingSet(normalizeSet(published))}><Eye /> Ver preguntas y respuestas</Button>}
               {draft ? <div className="draft-row"><div><strong>Borrador v{draft.version}</strong><span>Actualizado {date(draft.updated_at)}</span></div><Button onClick={() => setEditingSet(normalizeSet(draft))}><Pencil /> Editar borrador</Button></div>
                 : <Button variant="outline" className="new-version-button" disabled={busy === kind || demo} onClick={() => void createVersion(kind)}><Plus /> Crear nueva versión</Button>}
@@ -303,7 +302,7 @@ function SellerDialog({ seller, buildings, busy, onClose, onStatusChange }: { se
 function AssessmentViewer({ set, onClose }: { set: AssessmentSet | null; onClose: () => void }) {
   return <Dialog open={!!set} onOpenChange={open => { if (!open) onClose(); }}>
     <DialogContent className="assessment-dialog assessment-viewer">
-      {set && <><DialogHeader><DialogTitle>{set.name} · v{set.version}</DialogTitle><DialogDescription>Versión publicada · nota mínima {set.pass_percentage}% · {set.allowed_attempts} intento{set.allowed_attempts === 1 ? "" : "s"}.</DialogDescription></DialogHeader>
+      {set && <><DialogHeader><DialogTitle>{set.name} · v{set.version}</DialogTitle><DialogDescription>Banco de {set.assessment_questions.length} preguntas · cada examen muestra {set.questions_per_attempt} al azar · nota mínima {set.pass_percentage}% · {set.allowed_attempts} intento{set.allowed_attempts === 1 ? "" : "s"}.</DialogDescription></DialogHeader>
         <div className="published-question-list">{set.assessment_questions.map((question, index) => <article key={question.id || index}><div className="question-view-head"><strong>Pregunta {index + 1}</strong>{question.is_knockout && <span>Eliminatoria</span>}</div><h3>{question.prompt}</h3><ol>{question.options.map((option, optionIndex) => <li key={option} className={question.correct_option === optionIndex ? "correct-answer" : ""}><span>{String.fromCharCode(65 + optionIndex)}</span><p>{option}</p>{question.correct_option === optionIndex && <strong>Correcta</strong>}</li>)}</ol></article>)}</div>
         <DialogFooter><Button variant="outline" onClick={onClose}>Cerrar</Button></DialogFooter>
       </>}
@@ -315,11 +314,14 @@ function AssessmentEditor({ set, busy, onChange, onClose, onSave }: { set: Asses
   if (!set) return <Dialog open={false} />;
   const updateQuestion = (index: number, changes: Partial<Question>) => onChange({ ...set, assessment_questions: set.assessment_questions.map((question, current) => current === index ? { ...question, ...changes } : question) });
   const addQuestion = () => onChange({ ...set, assessment_questions: [...set.assessment_questions, { position: set.assessment_questions.length + 1, prompt: "", options: ["", ""], correct_option: 0, is_knockout: false }] });
-  const removeQuestion = (index: number) => onChange({ ...set, assessment_questions: set.assessment_questions.filter((_, current) => current !== index).map((question, position) => ({ ...question, position: position + 1 })) });
+  const removeQuestion = (index: number) => {
+    const questions = set.assessment_questions.filter((_, current) => current !== index).map((question, position) => ({ ...question, position: position + 1 }));
+    onChange({ ...set, questions_per_attempt: Math.min(set.questions_per_attempt, questions.length), assessment_questions: questions });
+  };
   return <Dialog open onOpenChange={open => { if (!open) onClose(); }}>
     <DialogContent className="assessment-dialog">
       <DialogHeader><DialogTitle>{kindLabels[set.kind]} · borrador v{set.version}</DialogTitle><DialogDescription>Los cambios se aplicarán a nuevos postulantes cuando publiques esta versión.</DialogDescription></DialogHeader>
-      <div className="assessment-config"><div><Label htmlFor="set-name">Nombre</Label><Input id="set-name" value={set.name} onChange={event => onChange({ ...set, name: event.target.value })} /></div><div><Label htmlFor="pass-score">Nota mínima (%)</Label><Input id="pass-score" type="number" min={1} max={100} value={set.pass_percentage} onChange={event => onChange({ ...set, pass_percentage: Number(event.target.value) })} /></div><div><Label htmlFor="attempts">Intentos permitidos</Label><Input id="attempts" type="number" min={1} max={5} value={set.allowed_attempts} onChange={event => onChange({ ...set, allowed_attempts: Number(event.target.value) })} /></div><label className="switch-field"><Switch checked={set.randomize_questions} onCheckedChange={value => onChange({ ...set, randomize_questions: value })} /><span>Mostrar preguntas en orden aleatorio</span></label></div>
+      <div className="assessment-config"><div><Label htmlFor="set-name">Nombre</Label><Input id="set-name" value={set.name} onChange={event => onChange({ ...set, name: event.target.value })} /></div><div><Label htmlFor="pass-score">Nota mínima (%)</Label><Input id="pass-score" type="number" min={1} max={100} value={set.pass_percentage} onChange={event => onChange({ ...set, pass_percentage: Number(event.target.value) })} /></div><div><Label htmlFor="attempts">Intentos permitidos</Label><Input id="attempts" type="number" min={1} max={5} value={set.allowed_attempts} onChange={event => onChange({ ...set, allowed_attempts: Number(event.target.value) })} /></div><div><Label htmlFor="question-count">Preguntas por examen</Label><Input id="question-count" type="number" min={1} max={set.assessment_questions.length} value={set.questions_per_attempt} onChange={event => onChange({ ...set, questions_per_attempt: Number(event.target.value), randomize_questions: true })} /></div><p className="randomization-note">Cada intento elegirá automáticamente {set.questions_per_attempt} pregunta{set.questions_per_attempt === 1 ? "" : "s"} al azar del banco completo.</p></div>
       <div className="question-editor-list">{set.assessment_questions.map((question, index) => <article className="question-editor" key={question.id || index}><div className="question-editor-head"><strong>Pregunta {index + 1}</strong><Button variant="ghost" size="icon-sm" aria-label={`Eliminar pregunta ${index + 1}`} disabled={set.assessment_questions.length === 1} onClick={() => removeQuestion(index)}><Trash2 /></Button></div><textarea aria-label={`Texto de la pregunta ${index + 1}`} value={question.prompt} onChange={event => updateQuestion(index, { prompt: event.target.value })} placeholder="Escribe la situación o pregunta" /> <div className="option-editor">{question.options.map((option, optionIndex) => <div key={optionIndex}><input type="radio" name={`correct-${index}`} checked={question.correct_option === optionIndex} onChange={() => updateQuestion(index, { correct_option: optionIndex })} aria-label={`Marcar alternativa ${optionIndex + 1} como correcta`} /><Input value={option} onChange={event => { const options = [...question.options]; options[optionIndex] = event.target.value; updateQuestion(index, { options }); }} placeholder={`Alternativa ${optionIndex + 1}`} />{question.options.length > 2 && <Button variant="ghost" size="icon-sm" aria-label="Eliminar alternativa" onClick={() => { const options = question.options.filter((_, current) => current !== optionIndex); updateQuestion(index, { options, correct_option: Math.min(question.correct_option, options.length - 1) }); }}><Trash2 /></Button>}</div>)}</div>{question.options.length < 6 && <Button variant="ghost" className="add-option" onClick={() => updateQuestion(index, { options: [...question.options, ""] })}><Plus /> Agregar alternativa</Button>}<label className="knockout-field"><Checkbox checked={question.is_knockout} onCheckedChange={value => updateQuestion(index, { is_knockout: value === true })} /><span>Respuesta incorrecta eliminatoria</span></label></article>)}</div>
       <Button variant="outline" onClick={addQuestion}><Plus /> Agregar pregunta</Button>
       <DialogFooter><Button variant="outline" onClick={() => void onSave(set, false)} disabled={busy}>Guardar borrador</Button><Button onClick={() => void onSave(set, true)} disabled={busy}>{busy ? "Publicando…" : "Guardar y publicar"}</Button></DialogFooter>
