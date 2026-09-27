@@ -271,6 +271,9 @@ body {
 .apply-primary { min-height: 50px; margin-top: 28px; padding: 0 22px; background: #087e86; color: white; font-size: 15px; font-weight: 800; }
 .apply-primary:hover { background: #06666d; }
 .question-list { display: grid; gap: 17px; margin: 33px 0 5px; }
+.assessment-guidance { max-width: 720px; display: grid; gap: 10px; margin-top: 22px; padding: 18px 20px; border: 1px solid #c4b5fd; border-radius: 13px; background: #f3f0ff; }
+.assessment-guidance p { color: #3d4053; font-size: 16px; line-height: 1.6; }
+.assessment-guidance small { color: #666b7d; font-size: 13px; line-height: 1.5; }
 .question-card { padding: 22px; border: 1px solid #d5e2e5; border-radius: 15px; background: white; }
 .question-card legend { display: flex; gap: 12px; width: 100%; padding: 0; font-size: 17px; font-weight: 800; line-height: 1.4; }
 .question-card legend span { color: #087e86; }
