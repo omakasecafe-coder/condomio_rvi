@@ -35,3 +35,7 @@ export function normalizeDocument(type: unknown, number: unknown) {
   return { documentType, documentNumber };
 }
 
+export function normalizePin(value: unknown) {
+  if (typeof value !== "string" || !/^\d{6}$/.test(value)) return null;
+  return value;
+}

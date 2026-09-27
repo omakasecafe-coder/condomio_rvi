@@ -2,8 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { normalizeDocument, publicAuthClient, serviceClient } from "@/lib/auth-config";
 import { requestSession } from "@/lib/request-session";
+import { DEFAULT_TERMS_URL, DEFAULT_TERMS_VERSION } from "@/lib/terms";
+import { resumableApplication } from "@/lib/application-progress";
 
 export const dynamic = "force-dynamic";
+
+function activeTerms() {
+  const configuredUrl = process.env.TERMS_URL?.trim();
+  const url = configuredUrl || DEFAULT_TERMS_URL;
+  const version = process.env.TERMS_VERSION?.trim() || DEFAULT_TERMS_VERSION;
+  const available = url === DEFAULT_TERMS_URL || /^https:\/\//.test(url);
+  return { url: available ? url : null, version: available ? version : null };
+}
 
 const profileFields = z.object({
   firstName: z.string().trim().min(1).max(100),
@@ -25,19 +35,31 @@ const answersFields = z.object({
   })).min(1).max(50),
 });
 
-export async function GET() {
-  const termsUrl = process.env.TERMS_URL?.trim() || "";
-  const termsVersion = process.env.TERMS_VERSION?.trim() || "";
+export async function GET(request: NextRequest) {
+  const terms = activeTerms();
   const materialUrl = process.env.MATERIALS_URL?.trim() || "";
-  const { data: assessments, error } = await publicAuthClient().rpc("get_published_assessments");
-  return NextResponse.json({
-    termsUrl: /^https:\/\//.test(termsUrl) ? termsUrl : null,
-    termsVersion: /^https:\/\//.test(termsUrl) ? termsVersion || null : null,
+  const context = requestSession(request);
+  const [{ data: assessments, error }, { data: auth }] = await Promise.all([
+    publicAuthClient().rpc("get_published_assessments"),
+    context.client.auth.getUser(),
+  ]);
+  let resume: { step: string; passedAttitude: boolean; passedCommercial: boolean } | null = null;
+  if (auth.user) {
+    const { data: profile } = await context.client.from("seller_profiles")
+      .select("status,application_stage,attitude_score,aptitude_score,knowledge_score")
+      .eq("auth_user_id", auth.user.id)
+      .maybeSingle();
+    if (profile) resume = resumableApplication(profile.status, profile.application_stage, profile.attitude_score);
+  }
+  return context.respond({
+    termsUrl: terms.url,
+    termsVersion: terms.version,
     materialsUrl: /^https:\/\//.test(materialUrl) ? materialUrl : null,
     acceptingApplications: process.env.APPLICATIONS_ENABLED === "true",
-    acceptingFinalValidation: process.env.APPLICATIONS_ENABLED === "true" && /^https:\/\//.test(termsUrl) && !!termsVersion,
+    acceptingFinalValidation: process.env.APPLICATIONS_ENABLED === "true" && !!terms.url && !!terms.version,
     assessments: error ? [] : assessments,
-  }, { headers: { "Cache-Control": "no-store" } });
+    resume,
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -66,9 +88,8 @@ export async function POST(request: NextRequest) {
       if (!profile || profile.status !== "APPLICANT" || (profile.attitude_score ?? 0) < 3 || (profile.knowledge_score ?? 0) < 3) {
         return context.respond({ error: "Completa primero las evaluaciones." }, 403);
       }
-      const termsUrl = process.env.TERMS_URL?.trim() || "";
-      const termsVersion = process.env.TERMS_VERSION?.trim() || "";
-      if (!/^https:\/\//.test(termsUrl) || !termsVersion) {
+      const terms = activeTerms();
+      if (!terms.url || !terms.version) {
         return context.respond({ error: "Las condiciones oficiales todavía no están disponibles." }, 503);
       }
       const length = Number(request.headers.get("content-length") || 0);
@@ -80,7 +101,7 @@ export async function POST(request: NextRequest) {
       if (!(photo instanceof File) || photo.size < 1 || photo.size > 5_000_000 || !["image/jpeg", "image/png", "image/webp"].includes(photo.type)) {
         return context.respond({ error: "Adjunta una foto JPG, PNG o WebP de hasta 5 MB." }, 400);
       }
-      if (!/^\d{6,30}$/.test(bankAccount) || !/^\d{20}$/.test(cci) || form.get("termsVersion") !== termsVersion || form.get("accepted") !== "true") {
+      if (!/^\d{6,30}$/.test(bankAccount) || !/^\d{20}$/.test(cci) || form.get("termsVersion") !== terms.version || form.get("accepted") !== "true") {
         return context.respond({ error: "Revisa la cuenta, el CCI y la aceptación de condiciones." }, 400);
       }
       const extension = photo.type === "image/jpeg" ? "jpg" : photo.type === "image/png" ? "png" : "webp";
@@ -92,8 +113,9 @@ export async function POST(request: NextRequest) {
         bank_account: bankAccount,
         cci,
         terms_accepted_at: new Date().toISOString(),
-        terms_version: termsVersion,
-        status: "ACTIVE",
+        terms_version: terms.version,
+        status: "APPLICANT",
+        application_stage: "CONTRACT",
         updated_at: new Date().toISOString(),
       }).eq("id", profile.id).eq("status", "APPLICANT").select("id").single();
       if (updateError) {

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 
 export default function AuthCallbackPage() {
   const [error, setError] = useState("");
@@ -42,7 +41,7 @@ export default function AuthCallbackPage() {
       <span className="card-kicker">VALIDANDO ENLACE</span>
       <h1>{error ? "No pudimos abrir este enlace" : "Ingresando a Condomio…"}</h1>
       <p>{error || "Espera un momento mientras verificamos tu acceso."}</p>
-      {error && <Link href="/ingresar" className="portal-link">Solicitar un enlace nuevo</Link>}
+      {error && <a href="/ingresar" className="portal-link">Solicitar un enlace nuevo</a>}
     </section>
   </main>;
 }

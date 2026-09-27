@@ -49,6 +49,13 @@ export default function SellerPortal() {
   const [error, setError] = useState("");
   const [demo, setDemo] = useState(false);
 
+  const openOpportunity = useCallback((item: OpportunityItem) => {
+    setSelected(item);
+    setPlan(item.opportunity.plan || "BASICO");
+    setDiscount(item.opportunity.autonomy_discount_applied);
+    setApartments(item.opportunity.confirmed_apartments || item.building.apartments);
+  }, []);
+
   const reload = useCallback(async () => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("demo") === "1") {
@@ -75,9 +82,9 @@ export default function SellerPortal() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (requested && ["edificios", "oportunidades", "comisiones", "perfil"].includes(requested)) setTab(requested);
     if (params.get("vista") === "nuevo-edificio") setBuildingForm(true);
-    if (params.get("vista") === "detalle-oportunidad" || params.get("vista") === "nueva-oportunidad") setSelected({ building: sampleBuildings[1], opportunity: sampleBuildings[1].opportunities[0] });
+    if (params.get("vista") === "detalle-oportunidad" || params.get("vista") === "nueva-oportunidad") openOpportunity({ building: sampleBuildings[1], opportunity: sampleBuildings[1].opportunities[0] });
     void reload();
-  }, [reload]);
+  }, [openOpportunity, reload]);
 
   async function save(action: string, data: unknown) {
     if (demo) { setError("Esta es una muestra visual. Los cambios no se guardan."); return; }
@@ -106,9 +113,9 @@ export default function SellerPortal() {
     {loading ? <p className="empty-state">Cargando tu información…</p> : <>
       {tab === "edificios" && <section className="workspace-section"><div className="section-title"><div><h2>Mis edificios</h2><p>Registrar un edificio no crea todavía una oportunidad.</p></div><Button onClick={() => setBuildingForm(value => !value)}><Plus /> {buildingForm ? "Cerrar" : "Nuevo edificio"}</Button></div>
         {buildingForm && <BuildingForm busy={busy} skipContact={skipContact} onSkipContact={setSkipContact} onSubmit={data => void save("createBuilding", data)} />}
-        <div className="record-list">{buildings.filter(building => building.lead_status !== "DISCARDED").map(building => <BuildingCard key={building.id} building={building} onAddContact={() => setContactBuilding(building)} onOpen={item => setSelected(item)} onDiscard={() => void save("discardBuilding", { buildingId: building.id, reason: "Sin potencial comercial por ahora" })} />)}</div>
+        <div className="record-list">{buildings.filter(building => building.lead_status !== "DISCARDED").map(building => <BuildingCard key={building.id} building={building} onAddContact={() => setContactBuilding(building)} onOpen={openOpportunity} onDiscard={() => void save("discardBuilding", { buildingId: building.id, reason: "Sin potencial comercial por ahora" })} />)}</div>
       </section>}
-      {tab === "oportunidades" && <section className="workspace-section"><div className="section-title"><div><h2>Oportunidades</h2><p>Agrupadas por la etapa real del proceso.</p></div><span>{opportunities.length} registradas</span></div>{grouped.length ? <div className="opportunity-groups">{grouped.map(group => <section className="opportunity-group" key={group.stage}><div className="opportunity-group-title"><h3>{commercialStageLabels[group.stage]}</h3><span>{group.items.length}</span></div><div className="record-list">{group.items.map(item => <OpportunityRow key={item.opportunity.id} item={item} onOpen={() => setSelected(item)} />)}</div></section>)}</div> : <p className="empty-state">La primera oportunidad aparecerá automáticamente cuando se agende una demo.</p>}</section>}
+      {tab === "oportunidades" && <section className="workspace-section"><div className="section-title"><div><h2>Oportunidades</h2><p>Agrupadas por la etapa real del proceso.</p></div><span>{opportunities.length} registradas</span></div>{grouped.length ? <div className="opportunity-groups">{grouped.map(group => <section className="opportunity-group" key={group.stage}><div className="opportunity-group-title"><h3>{commercialStageLabels[group.stage]}</h3><span>{group.items.length}</span></div><div className="record-list">{group.items.map(item => <OpportunityRow key={item.opportunity.id} item={item} onOpen={() => openOpportunity(item)} />)}</div></section>)}</div> : <p className="empty-state">La primera oportunidad aparecerá automáticamente cuando se agende una demo.</p>}</section>}
       {tab === "comisiones" && <section className="workspace-section"><div className="section-title"><div><h2>Comisiones</h2><p>Se generan después de confirmar la primera cuota.</p></div><span>{commissions.length} registradas</span></div>{commissions.length ? <div className="record-list">{commissions.map(({ building, opportunity, commission }) => <article className="record-card commission-card" key={commission.id}><div><span className="record-label">{formatDate(commission.generated_at)} · {opportunity.plan}</span><h3>{building.building_name}</h3><p>{money(opportunity.final_price_cents)} × {opportunity.confirmed_apartments} departamentos · sin IGV</p><strong>{money(commission.amount_cents)}</strong></div><span className={`status-chip ${commission.status === "PAID" ? "paid" : "pending"}`}>{commission.status === "PAID" ? "Pagada" : "Pendiente de pago"}</span></article>)}</div> : <p className="empty-state">Todavía no tienes comisiones generadas.</p>}</section>}
       {tab === "perfil" && profile && <section className="workspace-section"><div className="section-title"><h2>Mi información</h2><span>Solo lectura</span></div><div className="profile-card"><div><span>Nombre completo</span><strong>{profile.first_name} {profile.paternal_surname} {profile.maternal_surname}</strong></div><div><span>Documento</span><strong>{profile.document_type} {profile.document_number}</strong></div><div><span>Teléfono</span><strong>{profile.phone}</strong></div><div><span>Correo</span><strong>{profile.email}</strong></div><p>Para solicitar un cambio, escribe al correo administrador de Condomio.</p></div></section>}
     </>}

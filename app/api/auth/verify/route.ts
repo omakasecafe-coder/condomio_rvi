@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
         .eq("document_number", document!.documentNumber)
         .maybeSingle();
       if (lookupError) throw lookupError;
-      if (!profile || profile.status !== "ACTIVE") {
+      if (!profile || !["ACTIVE", "APPLICANT"].includes(profile.status)) {
         return NextResponse.json({ error: "No se pudo validar el código." }, { status: 401 });
       }
       email = profile.email;
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     if (error || !data.user || !data.session || (expectedUserId && data.user.id !== expectedUserId) || ((admin || applicant) && data.user.email?.toLowerCase() !== email)) {
       return NextResponse.json({ error: "No se pudo validar el código." }, { status: 401 });
     }
-    const response = NextResponse.json({ ok: true, next: admin ? "/admin" : applicant ? "/postular" : "/portal" });
+    const response = NextResponse.json({ ok: true, next: admin ? "/admin" : applicant ? "/postular" : "/postular?resume=1" });
     response.headers.set("Cache-Control", "no-store");
     const { url, publishableKey } = authSettings();
     const sessionClient = createServerClient(url, publishableKey, {

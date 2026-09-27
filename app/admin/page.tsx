@@ -40,7 +40,7 @@ type Item = { building: Building; opportunity: Opportunity };
 const stageLabels: Record<string, string> = {
   REGISTERED: "Registrado", ACTITUDINAL: "Evaluación actitudinal", APTITUDINAL: "Evaluación aptitudinal",
   TRAINING: "Capacitación", KNOWLEDGE: "Conocimiento", VALIDATION: "Validación documental",
-  CONTRACT: "Contrato", ACTIVE: "Vendedor activo", REJECTED: "Rechazado", SUSPENDED: "Suspendido",
+  CONTRACT: "Creación de PIN", ACTIVE: "Vendedor activo", REJECTED: "Rechazado", SUSPENDED: "Suspendido",
 };
 const kindLabels: Record<AssessmentKind, string> = { ATTITUDINAL: "Actitudinal", APTITUDINAL: "Aptitudinal" };
 const money = (cents: number) => `S/ ${(cents / 100).toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
