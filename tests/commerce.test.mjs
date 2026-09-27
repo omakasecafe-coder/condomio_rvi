@@ -17,8 +17,8 @@ test("ganado requiere negociación y contrato firmado", () => {
   assert.throws(() => validateWin("DEMO", true));
 });
 
-test("comisión es precio unitario por departamentos", () => {
-  assert.equal(commissionCents(2400, 48), 115200);
+test("comisión es precio unitario por departamentos sin IGV", () => {
+  assert.equal(commissionCents(2400, 48), 97627);
   assert.throws(() => commissionCents(2400, 0));
   assert.throws(() => commissionCents(Number.MAX_SAFE_INTEGER, 2));
 });
