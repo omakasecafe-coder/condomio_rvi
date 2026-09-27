@@ -42,7 +42,7 @@ export default function SellerLogin() {
   function changeDocument() { setStage("document"); setError(""); setNotice(""); resetResend(); }
 
   return <main className="mvp-shell">
-    <header className="mvp-header"><Link href="/" className="workspace-brand" aria-label="Volver al inicio"><span className="brand-mark" aria-hidden="true">C</span><span className="brand-name">Condomio <small>Red comercial</small></span></Link></header>
+    <header className="mvp-header"><Link prefetch={false} href="/" className="workspace-brand" aria-label="Volver al inicio"><span className="brand-mark" aria-hidden="true">C</span><span className="brand-name">Condomio <small>Red comercial</small></span></Link></header>
     <div className="mvp-grid">
       <section className="mvp-intro" aria-labelledby="main-title">
         <span className="eyebrow">PORTAL DE VENDEDORES INDEPENDIENTES</span><h1 id="main-title">Tu cartera comercial, en un solo lugar.</h1><p>Registra edificios, acompaña oportunidades y consulta tus comisiones con información siempre actualizada.</p><div className="intro-line" aria-hidden="true" /><div className="intro-facts"><span>01 · Edificios</span><span>02 · Oportunidades</span><span>03 · Comisiones</span></div><Link href="/postular" className="apply-home-link">¿Aún no formas parte de la red? Conoce cómo postular →</Link>
