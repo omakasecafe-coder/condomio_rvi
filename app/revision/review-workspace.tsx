@@ -58,7 +58,7 @@ export default function ReviewWorkspace() {
   return <main className="review-shell">
     <header className="review-header">
       <div className="workspace-brand"><span className="brand-mark" aria-hidden="true">C</span><span className="brand-name">Condomio <small>Revisión del MVP</small></span></div>
-      <div className="review-header-copy"><strong>Tablero de pantallas</strong><span>Datos ficticios · sin guardado</span></div>
+      <div className="review-header-copy"><strong>Tablero de pantallas</strong><span>Entorno visual · no ingreses datos reales</span></div>
     </header>
 
     <div className="review-layout">
