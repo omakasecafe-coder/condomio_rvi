@@ -397,7 +397,17 @@ body {
 @media (max-width: 900px) { .admin-metrics { grid-template-columns: repeat(2, 1fr); } .assessment-grid { grid-template-columns: 1fr; } .assessment-config { grid-template-columns: 1fr 1fr; } .assessment-config > div:first-child, .switch-field { grid-column: 1 / -1; } }
 @media (max-width: 700px) { .admin-toolbar { flex-direction: column; } .admin-search { width: 100%; } .stage-filter select { width: 100%; } .admin-tab-list { gap: 12px; overflow-x: auto; } .applicant-overview { grid-template-columns: 1fr; } .attempt-history article { grid-template-columns: 12px 1fr; } .attempt-history article .score-cell { grid-column: 2; } }
 @media (max-width: 520px) { .admin-metrics, .assessment-summary, .assessment-config { grid-template-columns: 1fr; } .assessment-config > div:first-child, .switch-field { grid-column: auto; } .assessment-card-head { align-items: flex-start; } .assessment-card-head > .status-chip { display: none; } }
-@media (max-width: 900px) { .apply-frame { grid-template-columns: 1fr; } .apply-sidebar { padding: 30px 24px; } .apply-sidebar h1, .apply-sidebar > p, .apply-sidebar small { display: none; } .apply-progress { display: flex; overflow-x: auto; margin-top: 18px; } .apply-progress button { flex: 0 0 auto; width: auto; } .apply-main { padding: 36px 24px 70px; } }
+@media (max-width: 900px) {
+  .apply-frame { width: 100%; min-width: 0; grid-template-columns: minmax(0, 1fr); overflow: hidden; }
+  .apply-sidebar, .apply-main { width: 100%; min-width: 0; }
+  .apply-sidebar { padding: 30px 24px; overflow: hidden; }
+  .apply-sidebar h1, .apply-sidebar > p, .apply-sidebar small { display: none; }
+  .apply-progress { width: 100%; max-width: 100%; display: flex; overflow-x: auto; overscroll-behavior-x: contain; margin-top: 18px; padding-bottom: 4px; }
+  .apply-progress button { flex: 0 0 auto; width: auto; }
+  .apply-main { padding: 36px 24px 70px; overflow: hidden; }
+  .apply-panel, .apply-panel form, .assessment-guidance, .question-list, .question-card, .question-card legend, .question-card > div { width: 100%; max-width: 100%; min-width: 0; }
+  .question-card label { min-width: 0; overflow-wrap: anywhere; }
+}
 @media (max-width: 650px) { .form-grid, .profile-card, .learn-grid { grid-template-columns: 1fr; } .apply-topline span:last-child { display: none; } .workspace-header { padding: 16px 20px; } .workspace-label { display: none; } }
 
 /* Visual review workspace */
