@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { serviceClient } from "@/lib/auth-config";
-import { transitionAsSeller, type OpportunityStatus } from "@/lib/commerce";
+import { opportunityUnitPriceCents, transitionAsSeller, type OpportunityStatus } from "@/lib/commerce";
 import { requestSession } from "@/lib/request-session";
 
 export const dynamic = "force-dynamic";
@@ -25,8 +25,8 @@ const buildingFields = z.object({
 
 const opportunityFields = z.object({
   buildingId: z.string().uuid(),
-  plan: z.enum(["BASICO", "PRO", "PERSONALIZADO"]),
-  unitPrice: z.string().regex(/^\d{1,8}(?:\.\d{1,2})?$/),
+  plan: z.enum(["BASICO", "PRO"]),
+  autonomyDiscount: z.boolean().default(false),
   observations: z.string().trim().max(2000).optional(),
 });
 
@@ -115,8 +115,7 @@ export async function POST(request: NextRequest) {
         .maybeSingle();
       if (buildingError) throw buildingError;
       if (!building) return context.respond({ error: "Edificio no encontrado." }, 404);
-      const [whole, fraction = ""] = data.unitPrice.split(".");
-      const unitPriceCents = Number(whole) * 100 + Number(fraction.padEnd(2, "0"));
+      const unitPriceCents = opportunityUnitPriceCents(data.plan, data.autonomyDiscount);
       const { error } = await db.from("opportunities").insert({
         building_id: building.id,
         plan: data.plan,

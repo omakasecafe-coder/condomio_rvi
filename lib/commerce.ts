@@ -8,6 +8,19 @@ export const opportunityStatuses = [
 
 export type OpportunityStatus = (typeof opportunityStatuses)[number];
 export type PaymentStatus = "PENDIENTE_DE_PAGO" | "PAGADO";
+export type CommercialPlan = "BASICO" | "PRO";
+
+export const planPricesCents: Record<CommercialPlan, number> = {
+  BASICO: 250,
+  PRO: 350,
+};
+
+export function opportunityUnitPriceCents(
+  plan: CommercialPlan,
+  autonomyDiscount: boolean,
+): number {
+  return planPricesCents[plan] - (autonomyDiscount ? 50 : 0);
+}
 
 const sellerNext: Partial<Record<OpportunityStatus, OpportunityStatus>> = {
   CONTACTO: "DEMO",

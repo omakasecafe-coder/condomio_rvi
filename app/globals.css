@@ -251,6 +251,18 @@ body {
 .portal-dialog { width: min(100%, 490px); display: grid; gap: 17px; padding: 30px; border-radius: 18px; background: #fff; box-shadow: 0 28px 80px rgba(0,0,0,.18); }
 .portal-dialog .section-title { margin-bottom: 0; }
 .portal-dialog .section-title button { font-size: 20px; }
+.opportunity-building-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 15px; border-radius: 11px; background: #f3f0ff; color: #4f46e5; font-size: 13px; }
+.opportunity-building-summary span { font-weight: 800; }
+.opportunity-building-summary strong { color: #5f6575; font-size: 12px; }
+.opportunity-discount { display: flex; align-items: flex-start; gap: 11px; padding: 15px; border: 1px solid #d8dbe5; border-radius: 11px; cursor: pointer; }
+.opportunity-discount > span { display: grid; gap: 3px; }
+.opportunity-discount strong { font-size: 14px; }
+.opportunity-discount small { color: #667085; font-size: 12px; line-height: 1.4; }
+.opportunity-pricing { display: grid; grid-template-columns: 1fr 1.35fr; gap: 10px; }
+.opportunity-pricing > div { display: grid; gap: 5px; padding: 15px; border: 1px solid #e1e3eb; border-radius: 12px; background: #f8f8fc; }
+.opportunity-pricing span { color: #666c7d; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+.opportunity-pricing strong { color: #4f46e5; font-size: 22px; letter-spacing: -.04em; }
+.opportunity-pricing small { color: #73798a; font-size: 11px; }
 .apply-shell { min-height: 100vh; background: #f3f7f9; color: #102333; }
 .apply-frame { display: grid; grid-template-columns: minmax(270px, 365px) minmax(0, 1fr); max-width: 1340px; min-height: calc(100vh - 75px); margin: auto; }
 .apply-sidebar { align-self: stretch; padding: 62px 33px 44px; background: #0c343e; color: #fff; }
@@ -409,6 +421,7 @@ body {
   .question-card label { min-width: 0; overflow-wrap: anywhere; }
 }
 @media (max-width: 650px) { .form-grid, .profile-card, .learn-grid { grid-template-columns: 1fr; } .apply-topline span:last-child { display: none; } .workspace-header { padding: 16px 20px; } .workspace-label { display: none; } }
+@media (max-width: 520px) { .portal-overlay { align-items: end; padding: 0; } .opportunity-dialog { max-height: 92vh; overflow-y: auto; border-radius: 20px 20px 0 0; padding: 24px 20px; } .opportunity-building-summary { align-items: flex-start; flex-direction: column; } .opportunity-pricing { grid-template-columns: 1fr; } }
 
 /* Visual review workspace */
 .review-shell { min-height: 100vh; background: #eaf0f2; color: #102333; }

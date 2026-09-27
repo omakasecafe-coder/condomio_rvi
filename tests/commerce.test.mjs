@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { commissionCents, transitionAsSeller, validatePaid, validateWin } from "../lib/commerce.ts";
+import { commissionCents, opportunityUnitPriceCents, transitionAsSeller, validatePaid, validateWin } from "../lib/commerce.ts";
 import { gradeAssessment } from "../lib/assessment.ts";
 
 test("solo el vendedor avanza por las transiciones permitidas", () => {
@@ -21,6 +21,13 @@ test("comisión es precio unitario por departamentos", () => {
   assert.equal(commissionCents(2400, 48), 115200);
   assert.throws(() => commissionCents(2400, 0));
   assert.throws(() => commissionCents(Number.MAX_SAFE_INTEGER, 2));
+});
+
+test("precio del plan aplica autonomía comercial", () => {
+  assert.equal(opportunityUnitPriceCents("BASICO", false), 250);
+  assert.equal(opportunityUnitPriceCents("BASICO", true), 200);
+  assert.equal(opportunityUnitPriceCents("PRO", false), 350);
+  assert.equal(opportunityUnitPriceCents("PRO", true), 300);
 });
 
 test("solo se paga una comisión ganada y pendiente", () => {

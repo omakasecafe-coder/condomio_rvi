@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { opportunityUnitPriceCents, type CommercialPlan } from "@/lib/commerce";
 
 type Opportunity = { id: string; plan: string; unit_price_cents: number; observations: string; status: string; commission_cents: number | null; payment_status: string | null };
 type Building = { id: string; building_name: string; apartments: number; district: string; province: string; department: string; street_type: string; street_name: string; street_number: string; administration_type: string; administration_company: string | null; contact_name: string; contact_role: string; contact_phone: string; contact_email: string; opportunities: Opportunity[] };
@@ -16,8 +18,8 @@ const money = (cents: number) => `S/ ${(cents / 100).toLocaleString("es-PE", { m
 const nextStatus: Record<string, string | undefined> = { CONTACTO: "DEMO", DEMO: "NEGOCIACIÓN", "NEGOCIACIÓN": "PERDIDO" };
 const sampleProfile: Profile = { first_name: "Valeria", paternal_surname: "Ramos", maternal_surname: "Salazar", document_type: "DNI", document_number: "••••4567", email: "valeria@ejemplo.com", phone: "+51 900 000 000" };
 const sampleBuildings: Building[] = [
-  { id: "sample-1", building_name: "Residencial Los Olivos", apartments: 48, district: "Miraflores", province: "Lima", department: "Lima", street_type: "Avenida", street_name: "Ejemplo", street_number: "125", administration_type: "TERCERA", administration_company: "Administración Demo", contact_name: "Lucía Torres", contact_role: "Administradora", contact_phone: "+51 900 000 001", contact_email: "lucia@ejemplo.com", opportunities: [{ id: "op-1", plan: "PRO", unit_price_cents: 2400, observations: "Demo realizada; pendiente de propuesta final.", status: "NEGOCIACIÓN", commission_cents: null, payment_status: null }] },
-  { id: "sample-2", building_name: "Edificio Aurora", apartments: 32, district: "San Isidro", province: "Lima", department: "Lima", street_type: "Calle", street_name: "Muestra", street_number: "240", administration_type: "PROPIA", administration_company: null, contact_name: "Carlos Paredes", contact_role: "Presidente de junta", contact_phone: "+51 900 000 002", contact_email: "carlos@ejemplo.com", opportunities: [{ id: "op-2", plan: "BASICO", unit_price_cents: 1800, observations: "Contrato firmado y validado.", status: "GANADO", commission_cents: 57600, payment_status: "PENDIENTE_DE_PAGO" }] },
+  { id: "sample-1", building_name: "Residencial Los Olivos", apartments: 48, district: "Miraflores", province: "Lima", department: "Lima", street_type: "Avenida", street_name: "Ejemplo", street_number: "125", administration_type: "TERCERA", administration_company: "Administración Demo", contact_name: "Lucía Torres", contact_role: "Administradora", contact_phone: "+51 900 000 001", contact_email: "lucia@ejemplo.com", opportunities: [{ id: "op-1", plan: "PRO", unit_price_cents: 350, observations: "Demo realizada; pendiente de propuesta final.", status: "NEGOCIACIÓN", commission_cents: null, payment_status: null }] },
+  { id: "sample-2", building_name: "Edificio Aurora", apartments: 32, district: "San Isidro", province: "Lima", department: "Lima", street_type: "Calle", street_name: "Muestra", street_number: "240", administration_type: "PROPIA", administration_company: null, contact_name: "Carlos Paredes", contact_role: "Presidente de junta", contact_phone: "+51 900 000 002", contact_email: "carlos@ejemplo.com", opportunities: [{ id: "op-2", plan: "BASICO", unit_price_cents: 250, observations: "Contrato firmado y validado.", status: "GANADO", commission_cents: 8000, payment_status: "PENDIENTE_DE_PAGO" }] },
 ];
 
 export default function SellerPortal() {
@@ -26,6 +28,8 @@ export default function SellerPortal() {
   const [tab, setTab] = useState<Tab>("edificios");
   const [showBuildingForm, setShowBuildingForm] = useState(false);
   const [opportunityBuilding, setOpportunityBuilding] = useState<string | null>(null);
+  const [opportunityPlan, setOpportunityPlan] = useState<CommercialPlan>("BASICO");
+  const [autonomyDiscount, setAutonomyDiscount] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -83,11 +87,14 @@ export default function SellerPortal() {
   function submitOpportunity(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    void save("createOpportunity", { buildingId: opportunityBuilding, plan: data.get("plan"), unitPrice: data.get("unitPrice"), observations: data.get("observations") });
+    void save("createOpportunity", { buildingId: opportunityBuilding, plan: opportunityPlan, autonomyDiscount, observations: data.get("observations") });
   }
 
   const opportunities = buildings.flatMap(building => building.opportunities.map(opportunity => ({ building, opportunity })));
   const commissions = opportunities.filter(item => item.opportunity.status === "GANADO");
+  const selectedOpportunityBuilding = buildings.find(building => building.id === opportunityBuilding);
+  const opportunityPriceCents = opportunityUnitPriceCents(opportunityPlan, autonomyDiscount);
+  const potentialCommissionCents = opportunityPriceCents * (selectedOpportunityBuilding?.apartments ?? 0);
   useEffect(() => { document.title = `${({ edificios: "Edificios", oportunidades: "Oportunidades", comisiones: "Comisiones", perfil: "Mi información" } as Record<Tab, string>)[tab]} · Portal vendedor Condomio`; }, [tab]);
 
   return <main className="mvp-shell workspace-shell">
@@ -109,7 +116,7 @@ export default function SellerPortal() {
         {tab === "comisiones" && <section className="workspace-section"><div className="section-title"><h2>Comisiones</h2><span>{commissions.length} oportunidades ganadas</span></div>{commissions.length ? <div className="record-list">{commissions.map(({ building, opportunity }) => <article className="record-card" key={opportunity.id}><div><span className="record-label">{opportunity.plan} · {building.district}</span><h3>{building.building_name}</h3><p>{money(opportunity.unit_price_cents)} × {building.apartments} departamentos</p><strong>{money(opportunity.commission_cents ?? opportunity.unit_price_cents * building.apartments)}</strong></div><span className={opportunity.payment_status === "PAGADO" ? "status-chip paid" : "status-chip pending"}>{opportunity.payment_status === "PAGADO" ? "Pagado" : "Pendiente de pago"}</span></article>)}</div> : <p className="empty-state">Cuando administración valide un contrato firmado, la comisión aparecerá aquí.</p>}</section>}
         {tab === "perfil" && <section className="workspace-section"><div className="section-title"><h2>Mi información</h2><span>Solo lectura</span></div>{profile && <div className="profile-card"><div><span>Nombre completo</span><strong>{profile.first_name} {profile.paternal_surname} {profile.maternal_surname}</strong></div><div><span>Documento</span><strong>{profile.document_type} {profile.document_number}</strong></div><div><span>Teléfono</span><strong>{profile.phone}</strong></div><div><span>Correo</span><strong>{profile.email}</strong></div><p>Para solicitar un cambio en tus datos, escribe al correo administrador de Condomio.</p></div>}</section>}
       </>}
-      {opportunityBuilding && <div className="portal-overlay" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setOpportunityBuilding(null); }}><form className="portal-dialog" role="dialog" aria-modal="true" aria-label="Nueva oportunidad" onSubmit={submitOpportunity}><div className="section-title"><h2>Nueva oportunidad</h2><button type="button" onClick={() => setOpportunityBuilding(null)} aria-label="Cerrar">✕</button></div><SelectField name="plan" label="Tipo de plan" values={["BASICO", "PRO", "PERSONALIZADO"]} /><Field name="unitPrice" label="Precio unitario por departamento (S/)" type="number" min="0" step="0.01" required /><div className="form-field"><Label htmlFor="observations">Observaciones</Label><Textarea id="observations" name="observations" maxLength={2000} /></div><Button type="submit" disabled={busy}>Guardar oportunidad</Button></form></div>}
+      {opportunityBuilding && <div className="portal-overlay" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setOpportunityBuilding(null); }}><form className="portal-dialog opportunity-dialog" role="dialog" aria-modal="true" aria-label="Nueva oportunidad" onSubmit={submitOpportunity}><div className="section-title"><h2>Nueva oportunidad</h2><button type="button" onClick={() => setOpportunityBuilding(null)} aria-label="Cerrar">✕</button></div><div className="opportunity-building-summary"><span>{selectedOpportunityBuilding?.building_name}</span><strong>{selectedOpportunityBuilding?.apartments ?? 0} departamentos</strong></div><div className="form-field"><Label htmlFor="plan">Tipo de plan</Label><Select value={opportunityPlan} onValueChange={value => setOpportunityPlan(value as CommercialPlan)}><SelectTrigger id="plan" className="field-control"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="BASICO">Básico (S/ 2.50)</SelectItem><SelectItem value="PRO">Pro (S/ 3.50)</SelectItem></SelectContent></Select></div><label className="opportunity-discount"><Checkbox checked={autonomyDiscount} onCheckedChange={checked => setAutonomyDiscount(checked === true)} /><span><strong>Aplicar autonomía comercial</strong><small>Reduce S/ 0.50 al precio unitario del plan.</small></span></label><div className="opportunity-pricing"><div><span>Precio unitario</span><strong>{money(opportunityPriceCents)}</strong><small>por departamento</small></div><div><span>Comisión potencial</span><strong>{money(potentialCommissionCents)}</strong><small>{money(opportunityPriceCents)} × {selectedOpportunityBuilding?.apartments ?? 0} departamentos</small></div></div><div className="form-field"><Label htmlFor="observations">Observaciones</Label><Textarea id="observations" name="observations" maxLength={2000} /></div><Button type="submit" disabled={busy}>Guardar oportunidad</Button></form></div>}
     </div>
   </main>;
 }
