@@ -19,38 +19,38 @@
 }
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f6f7fa;
+  --foreground: #050b1a;
   --card: #ffffff;
   --card-foreground: #171717;
   --popover: #ffffff;
   --popover-foreground: #171717;
-  --primary: #171717;
-  --primary-foreground: #fafafa;
-  --secondary: #f5f5f5;
-  --secondary-foreground: #171717;
-  --muted: #f5f5f5;
-  --muted-foreground: #737373;
-  --accent: #f5f5f5;
-  --accent-foreground: #171717;
+  --primary: #6366f1;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f0ff;
+  --secondary-foreground: #3730a3;
+  --muted: #f3f4f6;
+  --muted-foreground: #667085;
+  --accent: #f3f0ff;
+  --accent-foreground: #4f46e5;
   --destructive: #e7000b;
-  --border: #e5e5e5;
-  --input: #e5e5e5;
-  --ring: #a1a1a1;
-  --chart-1: #f54900;
-  --chart-2: #009689;
-  --chart-3: #104e64;
-  --chart-4: #ffb900;
-  --chart-5: #fe9a00;
+  --border: #e5e7eb;
+  --input: #e5e7eb;
+  --ring: #7c3aed;
+  --chart-1: #6366f1;
+  --chart-2: #8b5cf6;
+  --chart-3: #00e0d6;
+  --chart-4: #10b981;
+  --chart-5: #f59e0b;
   --radius: 0.625rem;
-  --sidebar: #fafafa;
-  --sidebar-foreground: #171717;
-  --sidebar-primary: #171717;
-  --sidebar-primary-foreground: #fafafa;
-  --sidebar-accent: #f5f5f5;
-  --sidebar-accent-foreground: #171717;
-  --sidebar-border: #e5e5e5;
-  --sidebar-ring: #a1a1a1;
+  --sidebar: #050b1a;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #7c3aed;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #0b1630;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #1d2942;
+  --sidebar-ring: #8b5cf6;
 }
 
 @theme inline {
@@ -89,7 +89,7 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --font-sans: Arial, Helvetica, sans-serif;
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
     "Liberation Mono", "Courier New", monospace;
 }
@@ -133,23 +133,23 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 :root {
-  --background: #f3f7f9;
-  --foreground: #102333;
-  --primary: #087e86;
+  --background: #f6f7fa;
+  --foreground: #050b1a;
+  --primary: #6366f1;
   --primary-foreground: #ffffff;
-  --ring: #087e86;
-  --border: #cbd9dd;
-  --input: #cbd9dd;
-  --muted-foreground: #546a75;
+  --ring: #7c3aed;
+  --border: #e5e7eb;
+  --input: #e5e7eb;
+  --muted-foreground: #667085;
 }
 
 .mvp-shell { min-height: 100vh; background: #f3f7f9; color: #102333; }
 .mvp-header { height: 86px; max-width: 1200px; margin: auto; display: flex; align-items: center; gap: 12px; padding: 0 32px; }
-.brand-mark { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 11px; background: #087e86; color: white; font-size: 24px; font-weight: 800; }
+.brand-mark { display: block; flex: 0 0 auto; width: 44px; height: 44px; background: url('/condomio-isotipo.svg') center / contain no-repeat; color: transparent; font-size: 0; }
 .brand-name { font-size: 22px; font-weight: 800; letter-spacing: -.04em; line-height: 1; }
 .brand-name small { display: block; margin-top: 5px; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #5d737d; }
 .mvp-grid { max-width: 1200px; min-height: calc(100vh - 86px); margin: auto; display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, 440px); align-items: center; gap: 8vw; padding: 48px 32px 96px; }
@@ -441,3 +441,100 @@ body {
 .review-feedback button { justify-self: end; padding: 11px 16px; border-radius: 9px; background: #0c343e; color: #fff; font-size: 13px; font-weight: 800; }
 @media (max-width: 1050px) { .review-layout { grid-template-columns: 270px minmax(0, 1fr); } .review-toolbar { align-items: flex-start; flex-direction: column; } .review-feedback { grid-template-columns: 1fr; } }
 @media (max-width: 760px) { .review-header-copy { display: none; } .review-layout { display: block; } .review-catalog { height: auto; max-height: 42vh; border-right: 0; border-bottom: 1px solid #cad8dc; } .review-stage { padding: 18px 12px; } .review-actions { width: 100%; align-items: flex-start; flex-direction: column; } .viewport-switch { max-width: 100%; overflow-x: auto; } .review-canvas { min-height: 560px; padding: 10px; } .review-device iframe { height: 720px; } }
+
+/* Condomio brand refresh — aligned with the public landing identity. */
+.mvp-shell,
+.apply-shell,
+.review-shell { background: #f6f7fa; color: #050b1a; }
+
+.mvp-header,
+.workspace-header,
+.review-header { border-color: #e5e7eb; }
+
+.brand-name { color: #050b1a; }
+.brand-name small,
+.workspace-label,
+.section-title span,
+.profile-card span,
+.review-header-copy span { color: #667085; }
+
+.eyebrow,
+.card-kicker,
+.record-label,
+.question-card legend span,
+.learn-grid article span,
+.question-view-head,
+.portal-link,
+.apply-home-link,
+.resend-button,
+.back-button,
+.add-option { color: #6366f1; }
+
+.intro-line,
+.submit-button,
+.record-actions button,
+.form-grid + button,
+.portal-dialog > button,
+.portal-form > button,
+.apply-primary,
+.draft-row button,
+.assessment-dialog [data-slot=dialog-footer] button:last-child,
+.review-actions > a { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 58%, #a855f7 100%); color: #fff; border-color: transparent; }
+
+.submit-button:hover,
+.record-actions button:hover,
+.apply-primary:hover { background: #4f46e5; }
+
+.record-actions button[data-variant=outline],
+.new-version-button { background: #fff; color: #6366f1; border-color: #a5b4fc; }
+
+.login-card,
+.metric-row > div,
+.record-card,
+.portal-form,
+.profile-card,
+.question-card,
+.learn-grid article,
+.admin-table-card,
+.assessment-card,
+.published-question-list > article,
+.seller-building-list article,
+.review-feedback { border-color: #e5e7eb; box-shadow: 0 18px 55px rgba(5, 11, 26, .06); }
+
+.review-feedback textarea:focus { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124, 58, 237, .14); }
+
+.portal-tabs,
+.admin-tab-list { border-color: #e5e7eb; }
+.portal-tabs button.active { border-color: #6366f1; color: #4f46e5; }
+.admin-tab-list button[data-state=active] { color: #6366f1; }
+
+.apply-sidebar { background: radial-gradient(circle at 20% 5%, #2e1a78 0, #0b1630 34%, #050b1a 78%); }
+.apply-sidebar .eyebrow { color: #c4b5fd; }
+.apply-sidebar > p { color: #c7d2fe; }
+.apply-sidebar small { color: #94a3b8; }
+.apply-progress button { color: #cbd5e1; }
+.apply-progress button.current { border-color: #7c3aed; background: rgba(99, 102, 241, .2); }
+.apply-progress button span { color: #c4b5fd; }
+
+.question-card label.selected,
+.draft-row,
+.resource-note,
+.demo-disclaimer,
+.demo-banner { border-color: #c4b5fd; background: #f3f0ff; }
+.question-card input,
+.option-editor input[type=radio] { accent-color: #6366f1; }
+.result-icon,
+.person-cell > span:first-child { background: #ede9fe; color: #6d28d9; }
+.assessment-icon,
+.review-code,
+.review-feedback button { background: #050b1a; color: #c4b5fd; }
+
+.review-catalog { border-color: #e5e7eb; background: #fff; }
+.review-group button:hover { background: #f3f0ff; }
+.review-group button.active { border-color: #a5b4fc; background: #ede9fe; }
+.review-group button > span { color: #6366f1; }
+.viewport-switch button.active { background: #ede9fe; color: #4f46e5; }
+.review-canvas { border-color: #d8dbe5; background-color: #eef0f6; background-image: radial-gradient(#c8cbd8 1px, transparent 1px); }
+.review-device { border-color: #c5c8d3; box-shadow: 0 24px 60px rgba(5,11,26,.15); }
+.resend-button:hover { color: #4f46e5; }
+.demo-banner { color: #4f46e5; }
