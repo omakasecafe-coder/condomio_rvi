@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
         .select("id,kind,name,version,status,pass_percentage,allowed_attempts,questions_per_attempt,randomize_questions,published_at,created_at,updated_at,assessment_questions(id,position,prompt,options,correct_option,is_knockout)")
         .order("version", { ascending: false }),
       context.client.from("buildings")
-        .select("id,seller_id,building_name,apartments,district,seller_profiles!inner(id,first_name,paternal_surname),opportunities(id,plan,unit_price_cents,status,commission_cents,payment_status)")
+        .select("id,seller_id,building_name,apartments,district,seller_profiles!inner(id,first_name,paternal_surname),opportunities(id,plan,unit_price_cents,status,commission_cents,payment_status,contract_generated_at)")
         .order("created_at", { ascending: false }),
     ]);
     if (profilesResult.error) throw profilesResult.error;
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
 }
 
 const commercialAction = z.object({
-  action: z.enum(["markWon", "markPaid"]),
+  action: z.enum(["generateContract", "markWon", "markPaid"]),
   opportunityId: z.string().uuid(),
   contractSigned: z.boolean().optional(),
 });
@@ -146,13 +146,21 @@ export async function POST(request: NextRequest) {
     const parsed = commercialAction.safeParse(body);
     if (!parsed.success) return context.respond({ error: "Solicitud inválida." }, 400);
     const { data: opportunity, error: lookupError } = await context.client.from("opportunities")
-      .select("id,status,unit_price_cents,commission_cents,payment_status,buildings!inner(apartments)")
+      .select("id,status,unit_price_cents,commission_cents,payment_status,contract_generated_at,buildings!inner(apartments)")
       .eq("id", parsed.data.opportunityId)
       .maybeSingle();
     if (lookupError) throw lookupError;
     if (!opportunity) return context.respond({ error: "Oportunidad no encontrada." }, 404);
 
+    if (parsed.data.action === "generateContract") {
+      if (opportunity.status !== "NEGOCIACIÓN") return context.respond({ error: "La oportunidad no está en negociación." }, 409);
+      const { error } = await context.client.from("opportunities").update({ contract_generated_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", opportunity.id);
+      if (error) throw error;
+      return context.respond({ ok: true });
+    }
+
     if (parsed.data.action === "markWon") {
+      if (!opportunity.contract_generated_at) return context.respond({ error: "Primero genera el contrato desde la plantilla." }, 409);
       if (!parsed.data.contractSigned) return context.respond({ error: "Confirma que el contrato está firmado." }, 400);
       try { validateWin(opportunity.status as OpportunityStatus, true); }
       catch { return context.respond({ error: "La oportunidad no está en negociación." }, 409); }

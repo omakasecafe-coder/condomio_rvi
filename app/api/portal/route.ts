@@ -32,8 +32,11 @@ const opportunityFields = z.object({
 
 const transitionFields = z.object({
   opportunityId: z.string().uuid(),
-  next: z.enum(["DEMO", "NEGOCIACIÓN", "PERDIDO"]),
+  next: z.enum(["DEMO", "NEGOCIACIÓN"]),
 });
+
+const checklistFields = z.object({ opportunityId: z.string().uuid(), item: z.enum(["brochure_sent", "demo_scheduled", "contract_sent"]), checked: z.boolean() });
+const lostFields = z.object({ opportunityId: z.string().uuid(), reason: z.enum(["PRECIO", "SIN_RESPUESTA", "OTRA_SOLUCION", "NO_PRIORIDAD", "OTRO"]) });
 
 async function sellerContext(request: NextRequest) {
   const session = requestSession(request);
@@ -54,7 +57,7 @@ export async function GET(request: NextRequest) {
     if (!context.profile) return context.respond({ error: "Acceso no autorizado." }, 401);
     const { data: buildings, error } = await context.client
       .from("buildings")
-      .select("id,street_type,street_name,street_number,district,province,department,building_name,apartments,administration_type,administration_company,contact_name,contact_role,contact_phone,contact_email,opportunities(id,plan,unit_price_cents,observations,status,commission_cents,payment_status)")
+      .select("id,street_type,street_name,street_number,district,province,department,building_name,apartments,administration_type,administration_company,contact_name,contact_role,contact_phone,contact_email,opportunities(id,plan,unit_price_cents,observations,status,commission_cents,payment_status,created_at,brochure_sent,demo_scheduled,contract_generated_at,contract_sent,lost_reason)")
       .eq("seller_id", context.profile.id)
       .order("created_at", { ascending: false });
     if (error) throw error;
@@ -148,6 +151,31 @@ export async function POST(request: NextRequest) {
         .maybeSingle();
       if (error) throw error;
       if (!changed) return context.respond({ error: "El estado cambió. Actualiza la página." }, 409);
+      return context.respond({ ok: true });
+    }
+    if (body.action === "updateChecklist") {
+      const parsed = checklistFields.safeParse(body.data);
+      if (!parsed.success) return context.respond({ error: "Actividad inválida." }, 400);
+      const { data: opportunity, error: lookupError } = await db.from("opportunities")
+        .select("id,contract_generated_at,buildings!inner(seller_id)").eq("id", parsed.data.opportunityId).eq("buildings.seller_id", context.profile.id).maybeSingle();
+      if (lookupError) throw lookupError;
+      if (!opportunity) return context.respond({ error: "Oportunidad no encontrada." }, 404);
+      if (parsed.data.item === "contract_sent" && parsed.data.checked && !opportunity.contract_generated_at) return context.respond({ error: "Administración aún no ha generado el contrato." }, 409);
+      const { error } = await db.from("opportunities").update({ [parsed.data.item]: parsed.data.checked, updated_at: new Date().toISOString() }).eq("id", opportunity.id);
+      if (error) throw error;
+      return context.respond({ ok: true });
+    }
+    if (body.action === "loseOpportunity") {
+      const parsed = lostFields.safeParse(body.data);
+      if (!parsed.success) return context.respond({ error: "Selecciona un motivo de pérdida." }, 400);
+      const { data: opportunity, error: lookupError } = await db.from("opportunities")
+        .select("id,status,buildings!inner(seller_id)").eq("id", parsed.data.opportunityId).eq("buildings.seller_id", context.profile.id).maybeSingle();
+      if (lookupError) throw lookupError;
+      if (!opportunity) return context.respond({ error: "Oportunidad no encontrada." }, 404);
+      try { transitionAsSeller(opportunity.status as OpportunityStatus, "PERDIDO"); }
+      catch { return context.respond({ error: "Solo una oportunidad en negociación puede marcarse como perdida." }, 409); }
+      const { error } = await db.from("opportunities").update({ status: "PERDIDO", lost_reason: parsed.data.reason, updated_at: new Date().toISOString() }).eq("id", opportunity.id).eq("status", "NEGOCIACIÓN");
+      if (error) throw error;
       return context.respond({ ok: true });
     }
     return context.respond({ error: "Acción no reconocida." }, 400);

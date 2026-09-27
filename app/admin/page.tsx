@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { attitudeQuestions, commercialQuestions, type AssessmentQuestion as SampleQuestion } from "@/lib/questions";
+import { commissionCents } from "@/lib/commerce";
 
 type AssessmentKind = "ATTITUDINAL" | "APTITUDINAL";
 type Attempt = {
@@ -32,7 +33,7 @@ type AssessmentSet = {
   pass_percentage: number; allowed_attempts: number; questions_per_attempt: number; randomize_questions: boolean;
   published_at: string | null; created_at: string; updated_at: string; assessment_questions: Question[];
 };
-type Opportunity = { id: string; plan: string; unit_price_cents: number; status: string; commission_cents: number | null; payment_status: string | null };
+type Opportunity = { id: string; plan: string; unit_price_cents: number; status: string; commission_cents: number | null; payment_status: string | null; contract_generated_at: string | null };
 type Building = { id: string; seller_id: string; building_name: string; apartments: number; district: string; seller_profiles: { id: string; first_name: string; paternal_surname: string }; opportunities: Opportunity[] };
 type AdminData = { applicants: Applicant[]; assessmentSets: AssessmentSet[]; buildings: Building[] };
 type Item = { building: Building; opportunity: Opportunity };
@@ -138,7 +139,7 @@ export default function AdminPage() {
     finally { setBusy(null); }
   }
 
-  async function act(item: Item, action: "markWon" | "markPaid") {
+  async function act(item: Item, action: "generateContract" | "markWon" | "markPaid") {
     setBusy(item.opportunity.id); setError("");
     try {
       await post({ action, opportunityId: item.opportunity.id, contractSigned: action === "markWon" ? !!checks[item.opportunity.id] : undefined });
@@ -249,7 +250,7 @@ export default function AdminPage() {
 
         <TabsContent value="commercial" className="admin-tab-panel">
           <section className="workspace-section"><div className="section-title"><h2>Contratos por validar</h2><span>{pending.length} oportunidades</span></div>
-            {pending.length ? <div className="record-list">{pending.map(item => <article className="record-card" key={item.opportunity.id}><div><span className="record-label">{item.opportunity.plan} · {item.building.district}</span><h3>{item.building.building_name}</h3><p>Vendedor: {item.building.seller_profiles.first_name} {item.building.seller_profiles.paternal_surname}</p><strong>Comisión: {money(item.opportunity.unit_price_cents * item.building.apartments)}</strong></div><div className="record-actions"><label className="checkbox-label"><Checkbox checked={!!checks[item.opportunity.id]} onCheckedChange={checked => setChecks(current => ({ ...current, [item.opportunity.id]: checked === true }))} /><span>Contrato firmado</span></label><Button disabled={!checks[item.opportunity.id] || busy === item.opportunity.id} onClick={() => void act(item, "markWon")}>Marcar ganado</Button></div></article>)}</div> : <p className="empty-state">No hay contratos pendientes de validación.</p>}
+            {pending.length ? <div className="record-list">{pending.map(item => <article className="record-card" key={item.opportunity.id}><div><span className="record-label">{item.opportunity.plan} · {item.building.district}</span><h3>{item.building.building_name}</h3><p>Vendedor: {item.building.seller_profiles.first_name} {item.building.seller_profiles.paternal_surname}</p><strong>Comisión: {money(commissionCents(item.opportunity.unit_price_cents, item.building.apartments))}</strong></div><div className="record-actions">{!item.opportunity.contract_generated_at ? <Button variant="outline" disabled={busy === item.opportunity.id} onClick={() => void act(item, "generateContract")}>Generar contrato desde plantilla</Button> : <><span className="status-chip paid">Contrato generado</span><label className="checkbox-label"><Checkbox checked={!!checks[item.opportunity.id]} onCheckedChange={checked => setChecks(current => ({ ...current, [item.opportunity.id]: checked === true }))} /><span>Contrato firmado</span></label><Button disabled={!checks[item.opportunity.id] || busy === item.opportunity.id} onClick={() => void act(item, "markWon")}>Marcar ganado</Button></>}</div></article>)}</div> : <p className="empty-state">No hay contratos pendientes de validación.</p>}
           </section>
           <section className="workspace-section"><div className="section-title"><h2>Comisiones</h2><span>{won.length} oportunidades ganadas</span></div>
             {won.length ? <div className="record-list">{won.map(item => <article className="record-card" key={item.opportunity.id}><div><span className="record-label">{item.opportunity.plan} · {item.building.district}</span><h3>{item.building.building_name}</h3><strong>{money(item.opportunity.commission_cents ?? 0)}</strong></div><div className="record-actions"><span className={item.opportunity.payment_status === "PAGADO" ? "status-chip paid" : "status-chip pending"}>{item.opportunity.payment_status === "PAGADO" ? "Pagado" : "Pendiente"}</span>{item.opportunity.payment_status !== "PAGADO" && <Button variant="outline" onClick={() => void act(item, "markPaid")}>Marcar pagado</Button>}</div></article>)}</div> : <p className="empty-state">Las oportunidades ganadas aparecerán aquí.</p>}
