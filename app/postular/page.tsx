@@ -42,7 +42,7 @@ export default function ApplyPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const { seconds: resendSeconds, restart: restartResend, canResend } = useResendCountdown();
-  const [config, setConfig] = useState<Config>({ termsUrl: null, termsVersion: null, materialsUrl: null, acceptingApplications: false, assessments: [] });
+  const [config, setConfig] = useState<Config>({ termsUrl: null, termsVersion: null, materialsUrl: null, acceptingApplications: true, assessments: [] });
   const restoredDraft = useRef(false);
 
   useEffect(() => {
