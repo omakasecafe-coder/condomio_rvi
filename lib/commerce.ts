@@ -60,7 +60,8 @@ export function commissionCents(
   ) {
     throw new Error("Precio unitario o número de departamentos inválido.");
   }
-  const amount = unitPriceCents * apartments;
+  const grossAmount = unitPriceCents * apartments;
+  const amount = Math.round((grossAmount * 100) / 118);
   if (!Number.isSafeInteger(amount)) {
     throw new Error("El importe de la comisión excede el límite permitido.");
   }
