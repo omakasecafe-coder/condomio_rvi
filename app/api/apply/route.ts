@@ -34,7 +34,8 @@ export async function GET() {
     termsUrl: /^https:\/\//.test(termsUrl) ? termsUrl : null,
     termsVersion: /^https:\/\//.test(termsUrl) ? termsVersion || null : null,
     materialsUrl: /^https:\/\//.test(materialUrl) ? materialUrl : null,
-    acceptingApplications: process.env.APPLICATIONS_ENABLED === "true" && /^https:\/\//.test(termsUrl) && !!termsVersion,
+    acceptingApplications: process.env.APPLICATIONS_ENABLED === "true",
+    acceptingFinalValidation: process.env.APPLICATIONS_ENABLED === "true" && /^https:\/\//.test(termsUrl) && !!termsVersion,
     assessments: error ? [] : assessments,
   }, { headers: { "Cache-Control": "no-store" } });
 }
@@ -152,4 +153,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No se pudo guardar la postulación." }, { status: 503 });
   }
 }
-

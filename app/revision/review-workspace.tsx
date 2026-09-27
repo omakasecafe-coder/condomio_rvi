@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { sellerStateLabels, sellerStates } from "@/lib/commerce";
 
 type ReviewGroup = "Sitio público" | "Accesos" | "Postulación" | "Portal vendedor" | "Administración";
 type ReviewScreen = {
@@ -27,8 +28,9 @@ const screens: ReviewScreen[] = [
   { id: "P10", group: "Postulación", name: "Bienvenida", description: "Ingreso confirmado a la red comercial independiente.", path: "/postular?demo=1&paso=bienvenida" },
   { id: "V01", group: "Portal vendedor", name: "Edificios", description: "Lista de edificios registrados por el vendedor.", path: "/portal?demo=1&seccion=edificios" },
   { id: "V02", group: "Portal vendedor", name: "Nuevo edificio", description: "Formulario completo para registrar un lead.", path: "/portal?demo=1&vista=nuevo-edificio" },
-  { id: "V03", group: "Portal vendedor", name: "Nueva oportunidad", description: "Plan, precio unitario y observaciones.", path: "/portal?demo=1&vista=nueva-oportunidad" },
-  { id: "V04", group: "Portal vendedor", name: "Oportunidades", description: "Seguimiento de estados permitido al vendedor.", path: "/portal?demo=1&seccion=oportunidades" },
+  { id: "V03", group: "Portal vendedor", name: "Detalle de oportunidad", description: "Estado, siguiente paso y condiciones comerciales según avance.", path: "/portal?demo=1&vista=detalle-oportunidad" },
+  { id: "V04", group: "Portal vendedor", name: "Oportunidades", description: "Procesos agrupados por su etapa comercial real.", path: "/portal?demo=1&seccion=oportunidades" },
+  ...sellerStates.map((state, index) => ({ id: `V04.${String(index + 1).padStart(2, "0")}`, group: "Portal vendedor" as const, name: sellerStateLabels[state], description: `Vista de muestra del estado “${sellerStateLabels[state]}”.`, path: `/portal?demo=1&seccion=oportunidades&estado=${state}` })),
   { id: "V05", group: "Portal vendedor", name: "Comisiones", description: "Ganadas, pendientes de pago y pagadas.", path: "/portal?demo=1&seccion=comisiones" },
   { id: "V06", group: "Portal vendedor", name: "Mi información", description: "Datos personales en modo de solo lectura.", path: "/portal?demo=1&seccion=perfil" },
   { id: "A01", group: "Administración", name: "Control comercial", description: "Validación de contratos y actualización de comisiones.", path: "/admin?demo=1" },

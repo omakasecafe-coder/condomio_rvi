@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { commissionCents, validatePaid, validateWin, type OpportunityStatus, type PaymentStatus } from "@/lib/commerce";
+import { commissionCents } from "@/lib/commerce";
 import { requestSession } from "@/lib/request-session";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
         .select("id,kind,name,version,status,pass_percentage,allowed_attempts,questions_per_attempt,randomize_questions,published_at,created_at,updated_at,assessment_questions(id,position,prompt,options,correct_option,is_knockout)")
         .order("version", { ascending: false }),
       context.client.from("buildings")
-        .select("id,seller_id,building_name,apartments,district,seller_profiles!inner(id,first_name,paternal_surname),opportunities(id,plan,unit_price_cents,status,commission_cents,payment_status,contract_generated_at)")
+        .select("id,seller_id,building_name,apartments,district,seller_profiles!inner(id,first_name,paternal_surname),opportunities(id,plan,unit_price_cents,status,seller_state,final_price_cents,confirmed_apartments,potential_commission_cents,commission_cents,payment_status,contract_generated_at,opportunity_demos(id,result,contact_attended,seller_attended,information_sent_at),contracts(id,status,signed_document_path),onboardings(id,status),first_installments(id,status,amount_cents),commissions(id,status,amount_cents))")
         .order("created_at", { ascending: false }),
     ]);
     if (profilesResult.error) throw profilesResult.error;
@@ -45,9 +45,9 @@ export async function GET(request: NextRequest) {
 }
 
 const commercialAction = z.object({
-  action: z.enum(["generateContract", "markWon", "markPaid"]),
+  action: z.enum(["recordDemo", "markInformationSent", "generateContract", "sendContract", "validateContract", "completeOnboarding", "confirmFirstPayment", "markPaid"]),
   opportunityId: z.string().uuid(),
-  contractSigned: z.boolean().optional(),
+  demoResult: z.enum(["QUALIFIED", "NOT_QUALIFIED", "RESCHEDULE"]).optional(),
 });
 
 const createVersionAction = z.object({
@@ -146,45 +146,75 @@ export async function POST(request: NextRequest) {
     const parsed = commercialAction.safeParse(body);
     if (!parsed.success) return context.respond({ error: "Solicitud inválida." }, 400);
     const { data: opportunity, error: lookupError } = await context.client.from("opportunities")
-      .select("id,status,unit_price_cents,commission_cents,payment_status,contract_generated_at,buildings!inner(apartments)")
+      .select("id,status,seller_state,final_price_cents,confirmed_apartments,commercial_version_id,buildings!inner(apartments,seller_id)")
       .eq("id", parsed.data.opportunityId)
       .maybeSingle();
     if (lookupError) throw lookupError;
     if (!opportunity) return context.respond({ error: "Oportunidad no encontrada." }, 404);
 
+    const now = new Date().toISOString();
+    const setState = async (expected: string, sellerState: string, extra: Record<string, unknown> = {}) => {
+      const { data, error } = await context.client.from("opportunities").update({ seller_state: sellerState, updated_at: now, ...extra }).eq("id", opportunity.id).eq("seller_state", expected).select("id").maybeSingle();
+      if (error) throw error;
+      if (!data) return context.respond({ error: "El estado cambió. Actualiza la página." }, 409);
+      return context.respond({ ok: true });
+    };
+
+    if (parsed.data.action === "recordDemo") {
+      if (opportunity.seller_state !== "DEMO_AGENDADA" || !parsed.data.demoResult) return context.respond({ error: "La demo no está lista para registrar." }, 409);
+      const qualified = parsed.data.demoResult === "QUALIFIED";
+      const { error } = await context.client.from("opportunity_demos").update({ result: parsed.data.demoResult, booking_status: "COMPLETED", contact_attended: true, seller_attended: true, completed_at: now, updated_at: now }).eq("opportunity_id", opportunity.id);
+      if (error) throw error;
+      return setState("DEMO_AGENDADA", qualified ? "DEMO_REALIZADA" : parsed.data.demoResult === "RESCHEDULE" ? "CONTACTO_REGISTRADO" : "NO_CONCRETADA", qualified ? {} : { active: parsed.data.demoResult === "RESCHEDULE", status: parsed.data.demoResult === "RESCHEDULE" ? "DEMO" : "PERDIDO", lost_reason: parsed.data.demoResult === "RESCHEDULE" ? null : "SIN_INTERES" });
+    }
+
+    if (parsed.data.action === "markInformationSent") {
+      const { error } = await context.client.from("opportunity_demos").update({ information_sent_at: now, updated_at: now }).eq("opportunity_id", opportunity.id);
+      if (error) throw error;
+      return setState("DEMO_REALIZADA", "INFORMACION_ENVIADA");
+    }
+
     if (parsed.data.action === "generateContract") {
-      if (opportunity.status !== "NEGOCIACIÓN") return context.respond({ error: "La oportunidad no está en negociación." }, 409);
-      const { error } = await context.client.from("opportunities").update({ contract_generated_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", opportunity.id);
+      const { error } = await context.client.from("contracts").update({ status: "GENERATED", approved_at: now, generated_at: now, updated_at: now }).eq("opportunity_id", opportunity.id).eq("status", "REQUESTED");
       if (error) throw error;
       return context.respond({ ok: true });
     }
 
-    if (parsed.data.action === "markWon") {
-      if (!opportunity.contract_generated_at) return context.respond({ error: "Primero genera el contrato desde la plantilla." }, 409);
-      if (!parsed.data.contractSigned) return context.respond({ error: "Confirma que el contrato está firmado." }, 400);
-      try { validateWin(opportunity.status as OpportunityStatus, true); }
-      catch { return context.respond({ error: "La oportunidad no está en negociación." }, 409); }
-      const building = opportunity.buildings as unknown as { apartments: number };
-      const amount = commissionCents(Number(opportunity.unit_price_cents), Number(building.apartments));
-      const { data: changed, error } = await context.client.from("opportunities")
-        .update({
-          status: "GANADO", contract_validated_at: new Date().toISOString(),
-          commission_cents: amount, payment_status: "PENDIENTE_DE_PAGO", updated_at: new Date().toISOString(),
-        })
-        .eq("id", opportunity.id).eq("status", "NEGOCIACIÓN").select("id").maybeSingle();
+    if (parsed.data.action === "sendContract") {
+      const { error } = await context.client.from("contracts").update({ status: "SENT", sent_at: now, updated_at: now }).eq("opportunity_id", opportunity.id).eq("status", "GENERATED");
       if (error) throw error;
-      if (!changed) return context.respond({ error: "El estado cambió. Actualiza la página." }, 409);
-      return context.respond({ ok: true });
+      return setState("CONTRATO_SOLICITADO", "CONTRATO_ENVIADO", { contract_generated_at: now, contract_sent: true });
     }
 
-    try { validatePaid(opportunity.status as OpportunityStatus, opportunity.payment_status as PaymentStatus); }
-    catch { return context.respond({ error: "La comisión no está pendiente de pago." }, 409); }
-    const { data: changed, error } = await context.client.from("opportunities")
-      .update({ payment_status: "PAGADO", paid_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-      .eq("id", opportunity.id).eq("status", "GANADO").eq("payment_status", "PENDIENTE_DE_PAGO")
-      .select("id").maybeSingle();
-    if (error) throw error;
-    if (!changed) return context.respond({ error: "El estado cambió. Actualiza la página." }, 409);
+    if (parsed.data.action === "validateContract") {
+      const { error } = await context.client.from("contracts").update({ status: "VALIDATED", validated_at: now, updated_at: now }).eq("opportunity_id", opportunity.id).eq("status", "IN_VALIDATION");
+      if (error) throw error;
+      await context.client.from("onboardings").insert({ opportunity_id: opportunity.id, status: "IN_PROGRESS", started_at: now });
+      return setState("CONTRATO_EN_VALIDACION", "ONBOARDING", { contract_validated_at: now });
+    }
+
+    if (parsed.data.action === "completeOnboarding") {
+      const { error } = await context.client.from("onboardings").update({ status: "COMPLETED", completed_at: now }).eq("opportunity_id", opportunity.id);
+      if (error) throw error;
+      const amount = Number(opportunity.final_price_cents) * Number(opportunity.confirmed_apartments);
+      await context.client.from("first_installments").insert({ opportunity_id: opportunity.id, amount_cents: amount, status: "PENDING" });
+      return setState("ONBOARDING", "PRIMERA_CUOTA_PENDIENTE");
+    }
+
+    if (parsed.data.action === "confirmFirstPayment") {
+      if (opportunity.seller_state !== "PRIMERA_CUOTA_PENDIENTE") return context.respond({ error: "La primera cuota no está pendiente." }, 409);
+      const building = opportunity.buildings as unknown as { apartments: number; seller_id: string };
+      const amount = commissionCents(Number(opportunity.final_price_cents), Number(opportunity.confirmed_apartments || building.apartments));
+      await context.client.from("first_installments").update({ status: "CONFIRMED", confirmed_at: now, confirmed_by: context.user.id }).eq("opportunity_id", opportunity.id);
+      const { error } = await context.client.from("commissions").insert({ opportunity_id: opportunity.id, seller_id: building.seller_id, base_amount_cents: Number(opportunity.final_price_cents) * Number(opportunity.confirmed_apartments || building.apartments), commission_percentage: 100, amount_cents: amount, status: "PENDING", generated_at: now });
+      if (error) throw error;
+      return setState("PRIMERA_CUOTA_PENDIENTE", "CONCRETADA", { active: false, status: "GANADO", commission_cents: amount, payment_status: "PENDIENTE_DE_PAGO" });
+    }
+
+    const { data: commission, error: commissionError } = await context.client.from("commissions").update({ status: "PAID", paid_at: now }).eq("opportunity_id", opportunity.id).eq("status", "PENDING").select("id").maybeSingle();
+    if (commissionError) throw commissionError;
+    if (!commission) return context.respond({ error: "La comisión no está pendiente." }, 409);
+    await context.client.from("opportunities").update({ payment_status: "PAGADO", paid_at: now, updated_at: now }).eq("id", opportunity.id);
     return context.respond({ ok: true });
   } catch (error) {
     console.error("Admin update failed", error);

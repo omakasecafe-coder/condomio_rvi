@@ -10,7 +10,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { attitudeQuestions, commercialQuestions, type AssessmentQuestion as SampleQuestion } from "@/lib/questions";
-import { commissionCents } from "@/lib/commerce";
 
 type AssessmentKind = "ATTITUDINAL" | "APTITUDINAL";
 type Attempt = {
@@ -33,7 +32,7 @@ type AssessmentSet = {
   pass_percentage: number; allowed_attempts: number; questions_per_attempt: number; randomize_questions: boolean;
   published_at: string | null; created_at: string; updated_at: string; assessment_questions: Question[];
 };
-type Opportunity = { id: string; plan: string; unit_price_cents: number; status: string; commission_cents: number | null; payment_status: string | null; contract_generated_at: string | null };
+type Opportunity = { id: string; plan: string | null; unit_price_cents: number | null; status: string; seller_state: string; final_price_cents: number | null; confirmed_apartments: number | null; potential_commission_cents: number | null; commission_cents: number | null; payment_status: string | null; contract_generated_at: string | null; opportunity_demos: { id: string; result: string | null; information_sent_at: string | null }[]; contracts: { id: string; status: string; signed_document_path: string | null }[]; onboardings: { id: string; status: string }[]; first_installments: { id: string; status: string; amount_cents: number }[]; commissions: { id: string; status: string; amount_cents: number }[] };
 type Building = { id: string; seller_id: string; building_name: string; apartments: number; district: string; seller_profiles: { id: string; first_name: string; paternal_surname: string }; opportunities: Opportunity[] };
 type AdminData = { applicants: Applicant[]; assessmentSets: AssessmentSet[]; buildings: Building[] };
 type Item = { building: Building; opportunity: Opportunity };
@@ -70,7 +69,6 @@ const sampleData: AdminData = {
 
 export default function AdminPage() {
   const [data, setData] = useState<AdminData>({ applicants: [], assessmentSets: [], buildings: [] });
-  const [checks, setChecks] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -139,10 +137,10 @@ export default function AdminPage() {
     finally { setBusy(null); }
   }
 
-  async function act(item: Item, action: "generateContract" | "markWon" | "markPaid") {
+  async function act(item: Item, action: "recordDemo" | "markInformationSent" | "generateContract" | "sendContract" | "validateContract" | "completeOnboarding" | "confirmFirstPayment" | "markPaid") {
     setBusy(item.opportunity.id); setError("");
     try {
-      await post({ action, opportunityId: item.opportunity.id, contractSigned: action === "markWon" ? !!checks[item.opportunity.id] : undefined });
+      await post({ action, opportunityId: item.opportunity.id, demoResult: action === "recordDemo" ? "QUALIFIED" : undefined });
       await reload();
     } catch (cause) { setError(cause instanceof Error ? cause.message : "No se pudo guardar el cambio."); }
     finally { setBusy(null); }
@@ -167,8 +165,13 @@ export default function AdminPage() {
   const active = sellerRecords.filter(item => item.status === "ACTIVE").length;
   const passed = applicantRecords.filter(item => latestAttempt(item, "ATTITUDINAL")?.passed && latestAttempt(item, "APTITUDINAL")?.passed).length;
   const all = data.buildings.flatMap(building => building.opportunities.map(opportunity => ({ building, opportunity })));
-  const pending = all.filter(item => item.opportunity.status === "NEGOCIACIÓN");
-  const won = all.filter(item => item.opportunity.status === "GANADO");
+  const commercialQueues = [
+    { label: "Demos por registrar", states: ["DEMO_AGENDADA"] },
+    { label: "Información por enviar", states: ["DEMO_REALIZADA"] },
+    { label: "Contratos", states: ["CONTRATO_SOLICITADO", "CONTRATO_EN_VALIDACION"] },
+    { label: "Activaciones", states: ["ONBOARDING", "PRIMERA_CUOTA_PENDIENTE"] },
+    { label: "Comisiones", states: ["CONCRETADA"] },
+  ].map(queue => ({ ...queue, items: all.filter(item => queue.states.includes(item.opportunity.seller_state)) }));
 
   return <main className="mvp-shell workspace-shell admin-shell">
     <header className="workspace-header"><div className="workspace-brand"><span className="brand-mark" aria-hidden="true">C</span><span className="brand-name">Condomio <small>Administración</small></span></div><span className="workspace-label">Red comercial</span></header>
@@ -249,12 +252,11 @@ export default function AdminPage() {
         </TabsContent>
 
         <TabsContent value="commercial" className="admin-tab-panel">
-          <section className="workspace-section"><div className="section-title"><h2>Contratos por validar</h2><span>{pending.length} oportunidades</span></div>
-            {pending.length ? <div className="record-list">{pending.map(item => <article className="record-card" key={item.opportunity.id}><div><span className="record-label">{item.opportunity.plan} · {item.building.district}</span><h3>{item.building.building_name}</h3><p>Vendedor: {item.building.seller_profiles.first_name} {item.building.seller_profiles.paternal_surname}</p><strong>Comisión: {money(commissionCents(item.opportunity.unit_price_cents, item.building.apartments))}</strong></div><div className="record-actions">{!item.opportunity.contract_generated_at ? <Button variant="outline" disabled={busy === item.opportunity.id} onClick={() => void act(item, "generateContract")}>Generar contrato desde plantilla</Button> : <><span className="status-chip paid">Contrato generado</span><label className="checkbox-label"><Checkbox checked={!!checks[item.opportunity.id]} onCheckedChange={checked => setChecks(current => ({ ...current, [item.opportunity.id]: checked === true }))} /><span>Contrato firmado</span></label><Button disabled={!checks[item.opportunity.id] || busy === item.opportunity.id} onClick={() => void act(item, "markWon")}>Marcar ganado</Button></>}</div></article>)}</div> : <p className="empty-state">No hay contratos pendientes de validación.</p>}
-          </section>
-          <section className="workspace-section"><div className="section-title"><h2>Comisiones</h2><span>{won.length} oportunidades ganadas</span></div>
-            {won.length ? <div className="record-list">{won.map(item => <article className="record-card" key={item.opportunity.id}><div><span className="record-label">{item.opportunity.plan} · {item.building.district}</span><h3>{item.building.building_name}</h3><strong>{money(item.opportunity.commission_cents ?? 0)}</strong></div><div className="record-actions"><span className={item.opportunity.payment_status === "PAGADO" ? "status-chip paid" : "status-chip pending"}>{item.opportunity.payment_status === "PAGADO" ? "Pagado" : "Pendiente"}</span>{item.opportunity.payment_status !== "PAGADO" && <Button variant="outline" onClick={() => void act(item, "markPaid")}>Marcar pagado</Button>}</div></article>)}</div> : <p className="empty-state">Las oportunidades ganadas aparecerán aquí.</p>}
-          </section>
+          <div className="section-title"><div><h2>Colas comerciales</h2><p>Condomio atiende únicamente los hitos que requieren validación interna.</p></div><span>{all.length} procesos</span></div>
+          <div className="commercial-queue-grid">{commercialQueues.map(queue => <section className="commercial-queue" key={queue.label}><div className="opportunity-group-title"><h3>{queue.label}</h3><span>{queue.items.length}</span></div>{queue.items.length ? <div className="record-list">{queue.items.map(item => {
+            const action = adminAction(item.opportunity); const contract = item.opportunity.contracts?.[0]; const commission = item.opportunity.commissions?.[0];
+            return <article className="record-card" key={item.opportunity.id}><div><span className="record-label">{item.opportunity.seller_state.replaceAll("_", " ")} · {item.building.district}</span><h3>{item.building.building_name}</h3><p>Vendedor: {item.building.seller_profiles.first_name} {item.building.seller_profiles.paternal_surname}</p><strong>{commission ? `Comisión: ${money(commission.amount_cents)}` : item.opportunity.final_price_cents ? `${money(item.opportunity.final_price_cents)} por departamento` : "Condiciones por definir"}</strong></div><div className="record-actions">{contract && <span className="status-chip pending">Contrato: {contract.status.replaceAll("_", " ")}</span>}{commission && <span className={commission.status === "PAID" ? "status-chip paid" : "status-chip pending"}>{commission.status === "PAID" ? "Pagada" : "Pendiente de pago"}</span>}{action && <Button disabled={busy === item.opportunity.id} onClick={() => void act(item, action.value)}>{action.label}</Button>}</div></article>;
+          })}</div> : <p className="empty-state">No hay elementos pendientes en esta cola.</p>}</section>)}</div>
         </TabsContent>
       </Tabs>
     </section>
@@ -268,6 +270,19 @@ export default function AdminPage() {
 
 function StageChip({ stage }: { stage: string }) {
   return <span className={`stage-chip stage-${stage.toLowerCase()}`}>{stageLabels[stage] || stage}</span>;
+}
+
+function adminAction(opportunity: Opportunity): { value: "recordDemo" | "markInformationSent" | "generateContract" | "sendContract" | "validateContract" | "completeOnboarding" | "confirmFirstPayment" | "markPaid"; label: string } | null {
+  const contract = opportunity.contracts?.[0];
+  if (opportunity.seller_state === "DEMO_AGENDADA") return { value: "recordDemo", label: "Registrar demo realizada" };
+  if (opportunity.seller_state === "DEMO_REALIZADA") return { value: "markInformationSent", label: "Confirmar información enviada" };
+  if (opportunity.seller_state === "CONTRATO_SOLICITADO" && contract?.status === "GENERATED") return { value: "sendContract", label: "Confirmar contrato enviado" };
+  if (opportunity.seller_state === "CONTRATO_SOLICITADO") return { value: "generateContract", label: "Generar contrato" };
+  if (opportunity.seller_state === "CONTRATO_EN_VALIDACION") return { value: "validateContract", label: "Validar contrato firmado" };
+  if (opportunity.seller_state === "ONBOARDING") return { value: "completeOnboarding", label: "Completar onboarding" };
+  if (opportunity.seller_state === "PRIMERA_CUOTA_PENDIENTE") return { value: "confirmFirstPayment", label: "Confirmar primera cuota" };
+  if (opportunity.seller_state === "CONCRETADA" && opportunity.commissions?.[0]?.status === "PENDING") return { value: "markPaid", label: "Marcar comisión pagada" };
+  return null;
 }
 
 function ScoreCell({ attempt }: { attempt?: Attempt }) {

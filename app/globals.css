@@ -213,6 +213,14 @@ body {
 .status-chip.status-perdido { color: #a52a32; background: #fde8e9; }
 .status-chip.status-contacto, .status-chip.status-demo, .status-chip.status-negociación { color: #6551a6; background: #eee9ff; }
 .opportunity-card { align-items: stretch; }
+.opportunity-groups { display: grid; gap: 30px; }
+.opportunity-group { display: grid; gap: 20px; }
+.opportunity-group + .opportunity-group { padding-top: 28px; border-top: 2px solid #e2e6ea; }
+.opportunity-group-title { display: flex; align-items: center; justify-content: space-between; }
+.opportunity-group-title h3 { font-size: 22px; font-weight: 850; }
+.opportunity-group-title span { min-width: 30px; padding: 5px 9px; border-radius: 99px; background: #eee9ff; color: #5b43bb; text-align: center; font-size: 12px; font-weight: 850; }
+.opportunity-status-group { display: grid; gap: 11px; }
+.opportunity-status-group > h4 { color: #707985; font-size: 12px; font-weight: 850; letter-spacing: .06em; text-transform: uppercase; }
 .opportunity-main { flex: 1; min-width: 0; }
 .opportunity-title { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
 .opportunity-data { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; margin: 18px 0; }
@@ -285,6 +293,60 @@ body {
 .opportunity-pricing span { color: #666c7d; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
 .opportunity-pricing strong { color: #4f46e5; font-size: 22px; letter-spacing: -.04em; }
 .opportunity-pricing small { color: #73798a; font-size: 11px; }
+.section-title > div > p { margin-top: 5px; color: #667085; font-size: 14px; }
+.building-card { align-items: stretch; }
+.building-card-main { min-width: 0; flex: 1; }
+.building-contact { display: flex; align-items: center; gap: 10px; margin-top: 17px; color: #6366f1; }
+.building-contact svg { width: 20px; }
+.building-contact span { display: grid; gap: 2px; }
+.building-contact strong { margin: 0; color: #18242c; font-size: 14px; }
+.building-contact small { color: #667085; font-size: 12px; }
+.building-next { width: min(100%, 440px); display: grid; align-content: center; gap: 9px; padding: 18px; border-radius: 13px; background: #f8f7ff; }
+.building-next > small { color: #667085; font-size: 11px; font-weight: 750; text-transform: uppercase; }
+.building-next > strong { margin: 0; font-size: 15px; line-height: 1.4; }
+.building-next .record-actions { min-width: 0; display: flex; flex-wrap: wrap; justify-content: flex-start; justify-items: stretch; gap: 8px; }
+.button-link { display: inline-flex; align-items: center; gap: 7px; min-height: 42px; padding: 0 16px; border-radius: 8px; background: linear-gradient(135deg, #4f46e5, #7c3aed 58%, #a855f7); color: #fff; font-size: 14px; font-weight: 750; }
+.button-link svg { width: 17px; }
+.inline-checks { display: flex; flex-wrap: wrap; gap: 18px; color: #475467; font-size: 14px; }
+.inline-checks label { display: flex; align-items: center; gap: 8px; }
+.opportunity-dialog { width: min(100%, 820px); max-height: calc(100vh - 40px); overflow-y: auto; }
+.opportunity-detail { display: grid; gap: 18px; }
+.opportunity-detail-hero { display: flex; justify-content: space-between; gap: 24px; padding: 20px; border-radius: 14px; background: #0b1630; color: #fff; }
+.opportunity-detail-hero h3 { margin: 7px 0; font-size: 25px; }
+.opportunity-detail-hero p { max-width: 520px; color: #c7d2fe; font-size: 14px; line-height: 1.5; }
+.opportunity-detail-hero > div:last-child { min-width: 130px; display: grid; align-content: center; gap: 5px; }
+.opportunity-detail-hero small { color: #a5b4fc; font-size: 11px; text-transform: uppercase; }
+.detail-callout { display: flex; align-items: center; gap: 12px; padding: 15px; border: 1px solid #c4b5fd; border-radius: 12px; background: #f5f3ff; color: #5b43bb; }
+.detail-callout div { display: grid; gap: 3px; }
+.detail-callout span { color: #5f6575; font-size: 13px; }
+.plan-panel { display: grid; gap: 16px; padding: 20px; border: 1px solid #dcd8ff; border-radius: 14px; background: #fbfaff; }
+.plan-panel h4 { font-size: 19px; }
+.plan-panel > p { color: #667085; font-size: 13px; }
+.plan-panel > button { justify-self: start; }
+.locked-plan { display: flex; align-items: center; gap: 13px; padding: 18px; border: 1px solid #e4e7ec; border-radius: 13px; background: #f9fafb; color: #667085; }
+.locked-plan div { display: grid; gap: 4px; }
+.locked-plan strong { color: #344054; }
+.locked-plan p { font-size: 13px; line-height: 1.45; }
+.detail-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; padding-top: 4px; }
+.contract-upload { display: grid; gap: 9px; padding: 18px; border: 1px solid #dcd8ff; border-radius: 13px; background: #fbfaff; }
+.contract-upload label { font-size: 13px; font-weight: 750; }
+.status-chip[class*="status-"] { color: #5b43bb; background: #eee9ff; }
+.status-chip.status-concretada { color: #176345; background: #e4f5ec; }
+.status-chip.status-no_concretada { color: #a52a32; background: #fde8e9; }
+.commercial-queue-grid { display: grid; gap: 28px; }
+.commercial-queue { display: grid; gap: 15px; padding: 22px; border: 1px solid #e5e7eb; border-radius: 16px; background: #fff; }
+@media (max-width: 700px) {
+  .form-grid, .profile-card, .opportunity-pricing, .opportunity-data { grid-template-columns: 1fr; }
+  .workspace-header { padding: 14px 18px; }
+  .workspace-label { display: none; }
+  .portal-tabs { display: grid; grid-template-columns: repeat(2, 1fr); }
+  .portal-tabs button { padding: 12px 8px; }
+  .portal-form { padding: 20px 16px; }
+  .portal-dialog { padding: 22px 16px; }
+  .building-next { width: 100%; }
+  .building-next .record-actions, .detail-actions { display: grid; }
+  .opportunity-detail-hero { flex-direction: column; }
+}
 .apply-shell { min-height: 100vh; background: #f3f7f9; color: #102333; }
 .apply-frame { display: grid; grid-template-columns: minmax(270px, 365px) minmax(0, 1fr); max-width: 1340px; min-height: calc(100vh - 75px); margin: auto; }
 .apply-sidebar { align-self: stretch; padding: 62px 33px 44px; background: #0c343e; color: #fff; }

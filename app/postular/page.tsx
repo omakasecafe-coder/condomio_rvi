@@ -13,7 +13,7 @@ type Step = "datos" | "correo" | "actitud" | "resultado" | "conoce" | "examen" |
 type Applicant = { firstName: string; paternalSurname: string; maternalSurname: string; documentType: string; documentNumber: string; birthDate: string; phone: string; email: string };
 type AssessmentQuestion = { id: string; prompt: string; options: string[] };
 type PublishedAssessment = { id: string; kind: "ATTITUDINAL" | "APTITUDINAL"; name: string; version: number; passPercentage: number; allowedAttempts: number; questionCount: number; randomizeQuestions: boolean; questions: AssessmentQuestion[] };
-type Config = { termsUrl: string | null; termsVersion: string | null; materialsUrl: string | null; acceptingApplications: boolean; assessments: PublishedAssessment[] };
+type Config = { termsUrl: string | null; termsVersion: string | null; materialsUrl: string | null; acceptingApplications: boolean; acceptingFinalValidation: boolean; assessments: PublishedAssessment[] };
 const steps: Step[] = ["datos", "correo", "actitud", "resultado", "conoce", "examen", "validacion", "bienvenida"];
 const labels: Record<Step, string> = { datos: "Datos personales", correo: "Verifica tu correo", actitud: "Evaluación actitudinal", resultado: "Resultado", conoce: "Conoce Condomio", examen: "Evaluación aptitudinal", "resultado-comercial": "Resultado aptitudinal", validacion: "Validación final", bienvenida: "Bienvenida" };
 const demoAssessments: PublishedAssessment[] = [
@@ -42,7 +42,7 @@ export default function ApplyPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const { seconds: resendSeconds, restart: restartResend, canResend } = useResendCountdown();
-  const [config, setConfig] = useState<Config>({ termsUrl: null, termsVersion: null, materialsUrl: null, acceptingApplications: true, assessments: [] });
+  const [config, setConfig] = useState<Config>({ termsUrl: null, termsVersion: null, materialsUrl: null, acceptingApplications: false, acceptingFinalValidation: false, assessments: [] });
   const restoredDraft = useRef(false);
 
   useEffect(() => {
@@ -96,7 +96,7 @@ export default function ApplyPage() {
     };
     setApplicant(data);
     if (demo) { forward("actitud"); return; }
-    if (!config.acceptingApplications) { setError("Las postulaciones aún no están habilitadas. No se han enviado tus datos."); return; }
+    if (!config.acceptingApplications) { setError("Las postulaciones se están preparando. Inténtalo nuevamente en unos minutos."); return; }
     setBusy(true); setError("");
     try {
       window.localStorage.setItem("condomio-application-draft", JSON.stringify(data));

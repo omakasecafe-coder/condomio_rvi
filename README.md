@@ -26,11 +26,11 @@ Las migraciones de `supabase/migrations/` ya están aplicadas al proyecto Supaba
 
 ## Variables y secretos
 
-`wrangler.jsonc` contiene únicamente configuración pública: URL y clave publicable de Supabase, correo del administrador y `APPLICATIONS_ENABLED=false`. Nunca agregues la clave `service_role`, contraseñas SMTP ni otros secretos al repositorio.
+`wrangler.jsonc` contiene únicamente configuración pública: URL y clave publicable de Supabase, correo del administrador y el interruptor público de postulaciones. Nunca agregues la clave `service_role`, contraseñas SMTP ni otros secretos al repositorio.
 
 Configura `SUPABASE_SERVICE_ROLE_KEY` como secreto del Worker en Cloudflare. La aplicación usa esa clave **solo en el servidor**. Para desarrollo local puedes usar un archivo `.dev.vars` ignorado por Git.
 
-Cuando Condomio entregue los documentos oficiales, configura `TERMS_URL` (enlace HTTPS), `TERMS_VERSION` (identificador de versión) y opcionalmente `MATERIALS_URL` (enlace HTTPS). Activa `APPLICATIONS_ENABLED=true` solo después de verificar el Magic Link, revisar las condiciones y probar el flujo completo. Mientras esté en `false`, nadie puede enviar postulaciones reales.
+`APPLICATIONS_ENABLED=true` permite registrar postulantes, verificar su correo y rendir evaluaciones. Cuando Condomio entregue los documentos oficiales, configura `TERMS_URL` (enlace HTTPS), `TERMS_VERSION` (identificador de versión) y opcionalmente `MATERIALS_URL` (enlace HTTPS). Sin condiciones vigentes, el último paso permanece bloqueado y no recibe documentos ni datos bancarios.
 
 El administrador autorizado es `pdongoi@data-prix.com`. Su acceso también requiere un Magic Link enviado a ese correo.
 

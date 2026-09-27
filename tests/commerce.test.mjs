@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { commissionCents, opportunityUnitPriceCents, transitionAsSeller, validatePaid, validateWin } from "../lib/commerce.ts";
+import { commercialStage, commissionCents, normalizeAddress, opportunityUnitPriceCents, sellerGuidance, transitionAsSeller, validatePaid, validateWin } from "../lib/commerce.ts";
 import { gradeAssessment } from "../lib/assessment.ts";
 
 test("solo el vendedor avanza por las transiciones permitidas", () => {
@@ -34,6 +34,21 @@ test("solo se paga una comisión ganada y pendiente", () => {
   assert.equal(validatePaid("GANADO", "PENDIENTE_DE_PAGO"), "PAGADO");
   assert.throws(() => validatePaid("GANADO", "PAGADO"));
   assert.throws(() => validatePaid("DEMO", "PENDIENTE_DE_PAGO"));
+});
+
+test("cada estado visible tiene etapa y siguiente paso calculados", () => {
+  assert.equal(commercialStage("DEMO_AGENDADA"), "DEMO");
+  assert.equal(commercialStage("PLAN_SELECCIONADO"), "CONTRATO");
+  assert.equal(commercialStage("PRIMERA_CUOTA_PENDIENTE"), "ACTIVACION");
+  assert.equal(sellerGuidance("CONTACTO_REGISTRADO").action, "SCHEDULE_DEMO");
+  assert.equal(sellerGuidance("DEMO_REALIZADA").responsible, "CONDOMIO");
+});
+
+test("la dirección normalizada permite detectar duplicados", () => {
+  assert.equal(
+    normalizeAddress(["Avenida", "José Pardo", "123", "Miraflores", "Lima", "Lima"]),
+    "avenida jose pardo 123 miraflores lima lima",
+  );
 });
 
 test("evaluaciones se corrigen en el servidor", () => {
