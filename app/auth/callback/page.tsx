@@ -42,7 +42,7 @@ export default function AuthCallbackPage() {
       <span className="card-kicker">VALIDANDO ENLACE</span>
       <h1>{error ? "No pudimos abrir este enlace" : "Ingresando a Condomio…"}</h1>
       <p>{error || "Espera un momento mientras verificamos tu acceso."}</p>
-      {error && <Link href="/" className="portal-link">Solicitar un enlace nuevo</Link>}
+      {error && <Link href="/ingresar" className="portal-link">Solicitar un enlace nuevo</Link>}
     </section>
   </main>;
 }

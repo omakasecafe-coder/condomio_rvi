@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Acceso comercial · Condomio",
-  description: "Portal de la red comercial independiente de Condomio.",
+  metadataBase: new URL("https://condomio-rvi-mvp.condomio.workers.dev"),
+  title: { default: "Red comercial · Condomio", template: "%s · Condomio" },
+  description: "Red de vendedores independientes de Condomio.",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",

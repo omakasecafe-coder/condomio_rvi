@@ -35,7 +35,7 @@ export default function SellerPortal() {
     if (new URLSearchParams(window.location.search).get("demo") === "1") { setDemo(true); setProfile(sampleProfile); setBuildings(sampleBuildings); setLoading(false); return; }
     try {
       const response = await fetch("/api/portal", { cache: "no-store" });
-      if (response.status === 401) { window.location.replace("/"); return; }
+      if (response.status === 401) { window.location.replace("/ingresar"); return; }
       const data = await response.json() as { profile?: Profile; buildings?: Building[]; error?: string };
       if (!response.ok) throw new Error(data.error || "No se pudo cargar el portal.");
       setProfile(data.profile || null);

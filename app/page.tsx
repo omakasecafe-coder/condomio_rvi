@@ -1,93 +1,61 @@
-"use client";
-
-import { useEffect, useState } from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useResendCountdown } from "@/lib/use-resend-countdown";
+import { ArrowRight, BadgeCheck, BarChart3, Building2, Check, ChevronDown, ClipboardCheck, Clock3, FileCheck2, Handshake, Menu, ShieldCheck, Sparkles, Target, UserRoundCheck, WalletCards } from "lucide-react";
+import { commissionExample, landingFaqs } from "@/lib/landing-content";
 
-type Stage = "document" | "link";
+export const metadata: Metadata = {
+  title: "Red de vendedores independientes",
+  description: "Postula a la red comercial independiente de Condomio, registra edificios y gestiona tus oportunidades y comisiones desde un solo portal.",
+  alternates: { canonical: "/" },
+  openGraph: { title: "Red de vendedores independientes · Condomio", description: "Convierte conexiones en oportunidades comerciales con el respaldo de Condomio.", url: "/", siteName: "Condomio", locale: "es_PE", type: "website" },
+};
 
-export default function Home() {
-  const [stage, setStage] = useState<Stage>("document");
-  const [documentType, setDocumentType] = useState("DNI");
-  const [documentNumber, setDocumentNumber] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
-  const { seconds: resendSeconds, restart: restartResend, reset: resetResend, canResend } = useResendCountdown();
+const benefits = [
+  { icon: WalletCards, title: "Comisiones por resultados", text: "Consulta el cálculo y el estado de pago de cada oportunidad ganada." },
+  { icon: Clock3, title: "Organiza tu tiempo", text: "Gestiona tu actividad comercial con autonomía y seguimiento visible." },
+  { icon: Target, title: "Proceso comercial claro", text: "Avanza cada oportunidad desde contacto hasta negociación." },
+  { icon: ShieldCheck, title: "Respaldo de Condomio", text: "Accede a un proceso ordenado, materiales y acompañamiento comercial." },
+];
 
-  useEffect(() => { document.title = `${stage === "link" ? "Enlace enviado" : "Acceso vendedor"} · Condomio MVP`; }, [stage]);
+const steps = [
+  ["01", "Completa tus datos", "Registra tu información personal y valida tu correo."],
+  ["02", "Supera las evaluaciones", "Responde el test actitudinal y conoce el modelo comercial."],
+  ["03", "Valida tu identidad", "Entrega los datos requeridos y acepta las condiciones."],
+  ["04", "Activa tu portal", "Recibe tus credenciales y empieza a registrar edificios."],
+] as const;
 
-  async function sendLink() {
-    const response = await fetch("/api/auth/start", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ documentType, documentNumber }),
-    });
-    const result = (await response.json()) as { error?: string };
-    if (!response.ok) throw new Error(result.error || "No se pudo enviar el enlace.");
-  }
+export default function PublicLanding() {
+  return <main className="landing-shell">
+    <header className="landing-header"><div className="landing-container landing-nav-row">
+      <Link href="/" className="landing-brand" aria-label="Condomio, página principal"><span className="brand-mark" aria-hidden="true" /><span>Condomio <small>Red comercial</small></span></Link>
+      <nav className="landing-desktop-nav" aria-label="Navegación principal"><a href="#como-funciona">Cómo funciona</a><a href="#beneficios">Beneficios</a><a href="#comisiones">Comisiones</a><a href="#preguntas">Preguntas</a></nav>
+      <div className="landing-nav-actions"><Link href="/ingresar" className="landing-link-button">Ingresar</Link><Link href="/postular" className="landing-button small">Quiero postular</Link></div>
+      <details className="landing-mobile-menu"><summary aria-label="Abrir menú"><Menu size={21} /></summary><div><a href="#como-funciona">Cómo funciona</a><a href="#beneficios">Beneficios</a><a href="#comisiones">Comisiones</a><a href="#preguntas">Preguntas</a><Link href="/ingresar">Ingresar</Link><Link href="/postular" className="landing-button small">Quiero postular</Link></div></details>
+    </div></header>
 
-  async function requestLink(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setBusy(true); setError(""); setNotice("");
-    try {
-      await sendLink();
-      setStage("link");
-      restartResend();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "No se pudo enviar el enlace.");
-    } finally { setBusy(false); }
-  }
+    <section className="landing-hero"><div className="landing-container landing-hero-grid">
+      <div className="landing-hero-copy"><span className="landing-pill"><Sparkles size={15} /> Red comercial independiente</span><h1>Convierte conexiones en <em>oportunidades.</em></h1><p>Forma parte de la red de vendedores independientes de Condomio y ayuda a más edificios a gestionar su comunidad de manera inteligente.</p><div className="landing-hero-actions"><Link href="/postular" className="landing-button">Quiero ser vendedor <ArrowRight size={18} /></Link><a href="#como-funciona" className="landing-secondary-button">Conocer el proceso</a></div><ul className="landing-proof" aria-label="Características del programa"><li><Check /> Postulación guiada</li><li><Check /> Portal comercial propio</li><li><Check /> Seguimiento de comisiones</li></ul></div>
+      <div className="landing-hero-visual" aria-label="Vista previa del portal comercial"><div className="landing-orbit orbit-one" /><div className="landing-orbit orbit-two" /><article className="landing-dashboard-card"><div className="landing-card-top"><span><i /> Mi panel comercial</span><small>Vista de muestra</small></div><div className="landing-mini-metrics"><div><small>Edificios</small><strong>08</strong><Building2 /></div><div><small>Oportunidades</small><strong>05</strong><BarChart3 /></div></div><div className="landing-pipeline"><span>Contacto</span><span>Demo</span><span>Negociación</span><span>Ganado</span><i /></div><div className="landing-opportunity"><div><b>Edificio Aurora</b><small>Plan Pro · En seguimiento</small></div><span>NEGOCIACIÓN</span></div></article><aside className="landing-float-card float-commission"><WalletCards /><span><small>Comisión</small><strong>Visible en tu portal</strong></span></aside><aside className="landing-float-card float-status"><BadgeCheck /><span><small>Proceso</small><strong>Validado</strong></span></aside></div>
+    </div></section>
 
-  async function resendLink() {
-    if (!canResend || busy) return;
-    setBusy(true); setError(""); setNotice("");
-    try {
-      await sendLink();
-      restartResend();
-      setNotice("Enviamos un enlace nuevo. Revisa también la carpeta de spam.");
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "No se pudo reenviar el enlace.");
-    } finally { setBusy(false); }
-  }
+    <section className="landing-section landing-intro-section"><div className="landing-container landing-two-column"><div><span className="landing-kicker">QUÉ ES CONDOMIO</span><h2>Tecnología para comunidades mejor gestionadas.</h2></div><div><p>Condomio es una plataforma de gestión inteligente de condominios. La red comercial conecta edificios interesados con una solución que ordena su operación y comunicación.</p><p>Como vendedor independiente, identificas oportunidades, registras cada edificio y acompañas el proceso comercial desde tu portal.</p></div></div></section>
 
-  function changeDocument() {
-    setStage("document"); setError(""); setNotice(""); resetResend();
-  }
+    <section id="como-funciona" className="landing-section landing-process-section"><div className="landing-container"><div className="landing-heading"><span className="landing-kicker">CÓMO FUNCIONA</span><h2>De un contacto a una oportunidad validada.</h2><p>Un flujo simple y trazable para que sepas qué viene después.</p></div><div className="landing-process-grid"><article><span>01</span><Handshake /><h3>Identifica</h3><p>Conecta con edificios que necesitan mejorar su gestión.</p></article><i /><article><span>02</span><Building2 /><h3>Registra</h3><p>Ingresa el edificio y sus datos de contacto en tu portal.</p></article><i /><article><span>03</span><BarChart3 /><h3>Acompaña</h3><p>Da seguimiento a la demo y a la negociación comercial.</p></article><i /><article><span>04</span><BadgeCheck /><h3>Gana</h3><p>Condomio valida el contrato y registra tu comisión.</p></article></div></div></section>
 
-  return <main className="mvp-shell">
-    <header className="mvp-header"><span className="brand-mark" aria-hidden="true">C</span><span className="brand-name">Condomio <small>Red comercial</small></span></header>
-    <div className="mvp-grid">
-      <section className="mvp-intro" aria-labelledby="main-title">
-        <span className="eyebrow">PORTAL DE VENDEDORES INDEPENDIENTES</span>
-        <h1 id="main-title">Tu cartera comercial, en un solo lugar.</h1>
-        <p>Registra edificios, acompaña oportunidades y consulta tus comisiones con información siempre actualizada.</p>
-        <div className="intro-line" aria-hidden="true" />
-        <div className="intro-facts"><span>01 · Edificios</span><span>02 · Oportunidades</span><span>03 · Comisiones</span></div>
-        <Link href="/postular" className="apply-home-link">¿Aún no formas parte de la red? Conoce cómo postular →</Link>
-      </section>
-      <section className="login-card" aria-labelledby="login-title">
-        <span className="card-kicker">ACCESO SEGURO</span>
-        <h2 id="login-title">{stage === "document" ? "Ingresa a tu portal" : "Revisa tu correo"}</h2>
-        <p>{stage === "document" ? "Usa el tipo y número de documento registrados en Condomio." : "Si tu documento está registrado, enviamos un enlace al correo asociado. Ábrelo para entrar a tu portal."}</p>
-        {stage === "document" ? <form onSubmit={requestLink} className="login-form">
-          <div className="form-field"><Label htmlFor="document-type">Tipo de documento</Label><Select value={documentType} onValueChange={setDocumentType}><SelectTrigger id="document-type" className="field-control"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="DNI">DNI</SelectItem><SelectItem value="CE">Carné de extranjería</SelectItem><SelectItem value="PASAPORTE">Pasaporte</SelectItem></SelectContent></Select></div>
-          <div className="form-field"><Label htmlFor="document-number">Número de documento</Label><Input id="document-number" className="field-control" value={documentNumber} onChange={event => setDocumentNumber(event.target.value)} autoComplete="off" maxLength={20} required /></div>
-          {error && <p role="alert" className="form-error">{error}</p>}
-          <Button type="submit" className="submit-button" disabled={busy}>{busy ? "Enviando enlace…" : "Enviar enlace de acceso"}</Button>
-        </form> : <div className="login-form">
-          {error && <p role="alert" className="form-error">{error}</p>}
-          {notice && <p role="status" className="form-notice">{notice}</p>}
-          <div className="resend-row" aria-live="polite">{canResend ? <button type="button" className="resend-button" onClick={() => void resendLink()} disabled={busy}>{busy ? "Reenviando…" : "Reenviar enlace"}</button> : <span>Podrás reenviar en {resendSeconds} s</span>}</div>
-          <button type="button" className="back-button" onClick={changeDocument}>Usar otro documento</button>
-        </div>}
-        <p className="login-foot">El enlace solo se envía al correo registrado y puede utilizarse una vez. Si necesitas actualizarlo, contacta a administración de Condomio.</p>
-        <Link href="/admin/login" className="admin-home-link">Acceso de administración</Link>
-      </section>
-    </div>
+    <section id="beneficios" className="landing-section"><div className="landing-container"><div className="landing-heading centered"><span className="landing-kicker">BENEFICIOS</span><h2>Herramientas para hacer crecer tu gestión.</h2></div><div className="landing-benefit-grid">{benefits.map(({ icon: Icon, title, text }) => <article key={title}><div><Icon /></div><h3>{title}</h3><p>{text}</p></article>)}</div></div></section>
+
+    <section id="comisiones" className="landing-section landing-commission-section"><div className="landing-container landing-commission-grid"><div><span className="landing-kicker light">MODELO DE COMISIONES</span><h2>Tu resultado, con una fórmula transparente.</h2><p>La comisión se calcula a partir del precio unitario de la oportunidad y la cantidad de departamentos del edificio.</p><ul><li><Check /> El monto queda asociado a la oportunidad ganada.</li><li><Check /> Administración valida el contrato antes de confirmarlo.</li><li><Check /> Puedes consultar si está pendiente o pagado.</li></ul></div><article className="landing-calculator"><div className="landing-calculator-head"><span>Ejemplo configurable</span><BarChart3 /></div><dl><div><dt>Edificios</dt><dd>{commissionExample.buildings}</dd></div><div><dt>Departamentos</dt><dd>{commissionExample.apartments}</dd></div><div><dt>Plan</dt><dd>{commissionExample.plan}</dd></div></dl><div className="landing-estimate"><span>Comisión estimada</span><strong>{commissionExample.estimate}</strong><small>{commissionExample.note}</small></div></article></div></section>
+
+    <section className="landing-section"><div className="landing-container landing-onboarding-grid"><div className="landing-heading"><span className="landing-kicker">INCORPORACIÓN</span><h2>Cuatro pasos para activar tu espacio comercial.</h2><p>El proceso valida que conozcas Condomio y cuentes con la información necesaria para comenzar.</p></div><ol className="landing-step-list">{steps.map(([number, title, text]) => <li key={number}><span>{number}</span><div><h3>{title}</h3><p>{text}</p></div></li>)}</ol></div></section>
+
+    <section className="landing-section landing-profile-section"><div className="landing-container landing-profile-grid"><div className="landing-profile-cards"><article className="profile-main-card"><UserRoundCheck /><span>Perfil recomendado</span><strong>Orientado a personas y resultados</strong></article><article><ClipboardCheck /><b>Orden y seguimiento</b></article><article><ShieldCheck /><b>Responsabilidad</b></article></div><div><span className="landing-kicker">PERFIL QUE BUSCAMOS</span><h2>Personas que construyen confianza.</h2><p>No necesitas conocer todas las respuestas desde el primer día. Valoramos tu capacidad para escuchar, aprender y dar seguimiento.</p><ul className="landing-check-list"><li><Check /> Comunicación clara y respetuosa</li><li><Check /> Iniciativa para generar oportunidades</li><li><Check /> Compromiso con la información registrada</li><li><Check /> Disposición para aprender el producto</li></ul></div></div></section>
+
+    <section className="landing-section landing-portal-section"><div className="landing-container"><div className="landing-heading centered"><span className="landing-kicker">TU PORTAL</span><h2>Todo tu proceso comercial, en un solo lugar.</h2><p>Registra edificios, crea oportunidades, acompaña sus estados y revisa tus comisiones.</p></div><div className="landing-portal-mockup"><aside><div className="landing-brand compact"><span className="brand-mark" /><span>Condomio</span></div><b>Resumen</b><span>Edificios</span><span>Oportunidades</span><span>Comisiones</span><span>Mi información</span></aside><div><div className="portal-mock-header"><span>Hola, Valeria.</span><i /></div><div className="portal-mock-metrics"><article><small>Edificios</small><strong>8</strong></article><article><small>Activas</small><strong>5</strong></article><article><small>Ganadas</small><strong>2</strong></article></div><div className="portal-mock-list"><span>Oportunidades recientes</span><article><Building2 /><div><b>Residencial Los Olivos</b><small>Plan Pro</small></div><em>NEGOCIACIÓN</em></article><article><Building2 /><div><b>Edificio Aurora</b><small>Plan Básico</small></div><em className="won">GANADO</em></article></div></div></div><p className="landing-portal-note"><FileCheck2 /> Tu información personal es de consulta. Si necesitas cambiarla, podrás solicitarlo a administración.</p></div></section>
+
+    <section id="preguntas" className="landing-section"><div className="landing-container landing-faq-grid"><div className="landing-heading"><span className="landing-kicker">PREGUNTAS FRECUENTES</span><h2>Lo esencial antes de postular.</h2><p>Revisa cómo funciona la red. Las condiciones definitivas se mostrarán antes de activar tu cuenta.</p></div><div className="landing-faq-list">{landingFaqs.map(item => <details key={item.question}><summary>{item.question}<ChevronDown aria-hidden="true" /></summary><p>{item.answer}</p></details>)}</div></div></section>
+
+    <section className="landing-final-cta"><div className="landing-container"><span className="landing-kicker light">TU SIGUIENTE OPORTUNIDAD</span><h2>¿Listo para formar parte de la red?</h2><p>Completa tu postulación y descubre si este modelo comercial es para ti.</p><div><Link href="/postular" className="landing-button light-button">Iniciar postulación <ArrowRight /></Link><Link href="/ingresar" className="landing-text-link">Ya soy vendedor</Link></div></div></section>
+
+    <footer className="landing-footer"><div className="landing-container"><div><Link href="/" className="landing-brand footer-brand"><span className="brand-mark" /><span>Condomio <small>Gestión inteligente de condominios</small></span></Link><p>Red comercial independiente de Condomio.</p></div><nav aria-label="Enlaces del pie"><Link href="/postular">Postular</Link><Link href="/ingresar">Ingresar</Link><span>Términos · próximamente</span><span>Privacidad · próximamente</span></nav><p>© {new Date().getFullYear()} Condomio</p></div></footer>
   </main>;
 }

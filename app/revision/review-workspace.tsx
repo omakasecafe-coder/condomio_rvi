@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-type ReviewGroup = "Accesos" | "Postulación" | "Portal vendedor" | "Administración";
+type ReviewGroup = "Sitio público" | "Accesos" | "Postulación" | "Portal vendedor" | "Administración";
 type ReviewScreen = {
   id: string;
   group: ReviewGroup;
@@ -12,7 +12,8 @@ type ReviewScreen = {
 };
 
 const screens: ReviewScreen[] = [
-  { id: "AC01", group: "Accesos", name: "Acceso del vendedor", description: "Ingreso con tipo y número de documento.", path: "/" },
+  { id: "WEB01", group: "Sitio público", name: "Página principal", description: "Presentación pública de la red comercial independiente.", path: "/" },
+  { id: "AC01", group: "Accesos", name: "Acceso del vendedor", description: "Ingreso con tipo y número de documento.", path: "/ingresar" },
   { id: "AC02", group: "Accesos", name: "Acceso administrativo", description: "Ingreso restringido al correo administrador.", path: "/admin/login" },
   { id: "P01", group: "Postulación", name: "Datos personales", description: "Formulario inicial del postulante.", path: "/postular?demo=1&paso=datos" },
   { id: "P02", group: "Postulación", name: "Verificación de correo", description: "Confirmación del enlace enviado al postulante.", path: "/postular?demo=1&paso=correo" },
@@ -33,10 +34,10 @@ const screens: ReviewScreen[] = [
   { id: "A01", group: "Administración", name: "Control comercial", description: "Validación de contratos y actualización de comisiones.", path: "/admin?demo=1" },
 ];
 
-const groups: ReviewGroup[] = ["Accesos", "Postulación", "Portal vendedor", "Administración"];
+const groups: ReviewGroup[] = ["Sitio público", "Accesos", "Postulación", "Portal vendedor", "Administración"];
 
 export default function ReviewWorkspace() {
-  const [selectedId, setSelectedId] = useState("P01");
+  const [selectedId, setSelectedId] = useState("WEB01");
   const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [note, setNote] = useState("");
   const [copied, setCopied] = useState(false);
